@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}
+  {% if page_name == 'dashboard' %}Dashboard
+  {% elif page_name == 'premium' %}Premium
+  {% elif page_name == 'settings' %}Settings
+  {% elif page_name == 'my_cards' %}My Cards
+  {% elif page_name == 'brand_kit' %}Brand Kit
+  {% elif page_name == 'rsvp' %}RSVP
+  {% endif %} – CardHub
+{% endblock %}

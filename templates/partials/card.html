@@ -1,0 +1,21 @@
+<div class="tmpl-card" onclick="location.href='/template/{{ t.id }}'">
+  {% if t.get('is_premium') %}<div class="premium-badge">💎 Premium</div>{% endif %}
+  <div class="tmpl-thumb">
+    {% if t.get('thumbnail') %}<img src="{{ t.thumbnail }}" alt="{{ t.get('title',t.get('name','')) }}" loading="lazy"/>
+    {% else %}<div class="tmpl-thumb-placeholder" style="background:{{ t.bg }}">🎨</div>{% endif %}
+    <div class="tmpl-overlay">
+      <a href="/template/{{ t.id }}" class="btn btn-gold btn-sm" onclick="event.stopPropagation()">View & Edit</a>
+    </div>
+  </div>
+  <div class="tmpl-meta">
+    <div class="tmpl-name">{{ t.get('title',t.get('name','Untitled')) }}</div>
+    <div class="tmpl-row">
+      <div class="tmpl-author"><span style="color:var(--muted)">@{{ uname }}</span></div>
+      <div class="tmpl-stats">
+        <span>❤ {{ lc }}</span>
+        <span>👁 {{ vc }}</span>
+      </div>
+    </div>
+    <span class="cat-tag">{{ t.get('category','General') }}</span>
+  </div>
+</div>

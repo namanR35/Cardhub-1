@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Premium – CardHub{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:48px;padding-bottom:60px;max-width:680px">
+  <div style="text-align:center;margin-bottom:36px">
+    <div style="font-size:.73rem;color:var(--purple);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">✦ Upgrade</div>
+    <h1 style="font-family:var(--font-d);font-size:2.4rem;font-weight:700;margin-bottom:10px">CardHub <span style="color:var(--purple)">Premium</span></h1>
+    <p style="color:var(--muted)">Unlock the full design experience</p>
+  </div>
+  <div class="prem-card mb-4">
+    <div class="prem-glow"></div>
+    <div style="font-family:var(--font-d);font-size:2.2rem;font-weight:700;color:var(--purple);margin-bottom:4px">₹299 <span style="font-size:1rem;font-weight:400;color:var(--muted)">/month</span></div>
+    <div style="font-size:.875rem;color:var(--muted);margin-bottom:22px">Cancel anytime</div>
+    <div style="display:flex;flex-direction:column;gap:9px;text-align:left;margin:0 auto 22px;max-width:320px">
+      {% for f in ['Remove all watermarks from downloads','High-resolution export (2× quality)','Access exclusive Premium-only templates','Premium badge on your profile','Unlimited saves and bookmarks','Early access to new features'] %}
+      <div class="prem-feature"><span class="prem-check">✓</span><span>{{ f }}</span></div>
+      {% endfor %}
+    </div>
+    {% if user %}
+      {% if user.is_premium %}
+      <div style="background:rgba(76,175,130,.15);border:1px solid rgba(76,175,130,.3);border-radius:var(--r-sm);padding:13px;text-align:center">
+        <div style="color:var(--green);font-weight:700">✓ You're Premium!</div>
+      </div>
+      {% else %}
+      <button class="btn btn-premium btn-full" onclick="activate()" id="prem-btn" style="font-size:1rem;padding:13px">✦ Activate Premium</button>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:7px;text-align:center">Demo: click to simulate activation</div>
+      {% endif %}
+    {% else %}
+    <a href="/register" class="btn btn-premium btn-full" style="font-size:1rem;padding:13px">Join Free → Upgrade to Premium</a>
+    {% endif %}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px">
+    {% for i,t,d in [('🎨','For Creators','Upload premium templates and earn recognition'),('⬇','For Users','Download watermark-free in high resolution')] %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px"><div style="font-size:1.4rem;margin-bottom:7px">{{ i }}</div><div style="font-weight:700;margin-bottom:4px">{{ t }}</div><div style="font-size:.8rem;color:var(--muted);line-height:1.55">{{ d }}</div></div>
+    {% endfor %}
+  </div>
+</div>
+<script>
+async function activate(){const btn=document.getElementById('prem-btn');btn.disabled=true;btn.textContent='Activating…';const r=await fetch('/api/subscribe',{method:'POST'});const d=await r.json();if(d.success){showToast('Premium activated! 🎉','success');setTimeout(()=>location.reload(),900);}}
+</script>
+{% endblock %}

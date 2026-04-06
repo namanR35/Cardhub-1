@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Settings – CardHub{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:32px;padding-bottom:48px;max-width:600px">
+  <h1 style="font-family:var(--font-d);font-size:2rem;font-weight:700;margin-bottom:24px">Account Settings</h1>
+
+  <!-- PROFILE -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:14px;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Profile</div>
+    <div class="form-group">
+      <label class="form-label">Avatar</label>
+      <div class="flex gap-3 items-center">
+        {% if user.avatar %}<img src="{{ user.avatar }}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid var(--border2)"/>
+        {% else %}<div style="width:50px;height:50px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:1.3rem;color:var(--gold);border:2px solid var(--border2)">{{ user.username[0].upper() }}</div>{% endif %}
+        <div class="upload-zone" style="flex:1;padding:9px"><div class="upload-zone-text">Click to change avatar</div><input type="file" accept="image/*" onchange="upAv(this)"/></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Display Name</label>
+      <input id="s-dname" class="form-input" value="{{ user.display_name or user.username }}" placeholder="Your display name"/>
+    </div>
+    <div class="form-group"><label class="form-label">Bio</label><textarea id="s-bio" class="form-input" rows="3">{{ user.bio or '' }}</textarea></div>
+    <div class="form-group"><label class="form-label">Website</label><input type="url" id="s-web" class="form-input" value="{{ user.website or '' }}" placeholder="https://"/></div>
+    <div class="form-group"><label class="form-label">Public Contact Email</label><input type="email" id="s-contact" class="form-input" value="{{ user.contact or '' }}"/></div>
+    <button class="btn btn-gold btn-sm" onclick="save()">Save Profile</button>
+  </div>
+
+  <!-- WATERMARK / LOGO -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:14px;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Watermark & Identity</div>
+    <div class="form-group">
+      <label class="form-label">Your Name / Watermark Text</label>
+      <input id="s-wm" class="form-input" value="{{ user.watermark_text or '@'+user.username }}" placeholder="@yourname"/>
+      <div class="form-hint">Appears on all non-premium downloads of your templates</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Upload Logo (replaces text watermark)</label>
+      {% if user.logo_url %}
+      <div style="margin-bottom:8px;display:flex;align-items:center;gap:10px">
+        <img src="{{ user.logo_url }}" style="height:36px;width:auto;border-radius:5px;border:1px solid var(--border2)"/>
+        <span style="font-size:.78rem;color:var(--green)">✓ Logo active as watermark</span>
+      </div>
+      {% endif %}
+      <div class="upload-zone" style="padding:12px">
+        <div class="upload-zone-text"><strong style="color:var(--gold)">Upload your logo</strong> — will be used as watermark<br><span style="font-size:.68rem">PNG with transparent background recommended</span></div>
+        <input type="file" accept="image/*" onchange="upLogo(this)"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROLE -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:12px;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Account Role</div>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Switch between Designer (upload templates) and User (edit & download) at any time.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div onclick="setRole('downloader')" id="role-dl" class="role-btn {% if user.role=='downloader' %}active{% endif %}" style="padding:12px;border-radius:var(--r-sm);background:var(--surface2);border:1px solid var(--border);cursor:pointer;text-align:center;transition:all .18s">
+        <div style="font-size:1.3rem;margin-bottom:4px">🎨</div>
+        <div style="font-weight:700;font-size:.85rem">User</div>
+        <div style="font-size:.7rem;color:var(--muted)">Edit, download, save</div>
+        {% if user.role=='downloader' %}<div class="tag tag-green mt-2" style="font-size:.6rem">Current</div>{% endif %}
+      </div>
+      <div onclick="setRole('uploader')" id="role-ul" class="role-btn {% if user.role=='uploader' %}active{% endif %}" style="padding:12px;border-radius:var(--r-sm);background:var(--surface2);border:1px solid var(--border);cursor:pointer;text-align:center;transition:all .18s">
+        <div style="font-size:1.3rem;margin-bottom:4px">📤</div>
+        <div style="font-weight:700;font-size:.85rem">Designer</div>
+        <div style="font-size:.7rem;color:var(--muted)">Upload & share templates</div>
+        {% if user.role=='uploader' %}<div class="tag tag-gold mt-2" style="font-size:.6rem">Current</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- PRIVACY -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:12px;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Profile Privacy</div>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Choose who can see your full profile, designs, and saved cards.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div onclick="setPrivacy('public')" id="priv-pub" class="role-btn {% if (user.profile_privacy or 'public')=='public' %}active{% endif %}" style="padding:12px;border-radius:var(--r-sm);background:var(--surface2);border:1px solid var(--border);cursor:pointer;text-align:center;transition:all .18s">
+        <div style="font-size:1.2rem;margin-bottom:3px">🌍</div>
+        <div style="font-weight:700;font-size:.85rem">Public</div>
+        <div style="font-size:.7rem;color:var(--muted)">Anyone can see your profile</div>
+      </div>
+      <div onclick="setPrivacy('private')" id="priv-priv" class="role-btn {% if user.profile_privacy=='private' %}active{% endif %}" style="padding:12px;border-radius:var(--r-sm);background:var(--surface2);border:1px solid var(--border);cursor:pointer;text-align:center;transition:all .18s">
+        <div style="font-size:1.2rem;margin-bottom:3px">🔒</div>
+        <div style="font-weight:700;font-size:.85rem">Private</div>
+        <div style="font-size:.7rem;color:var(--muted)">Followers only (send request)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCOUNT INFO -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:10px;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Account</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.84rem">
+      <div><span style="color:var(--muted)">Username:</span> <span style="color:var(--gold)">@{{ user.username }}</span></div>
+      <div><span style="color:var(--muted)">Status:</span> {% if user.is_premium %}<span class="tag tag-purple">Premium</span>{% else %}<span class="tag" style="background:var(--surface2);color:var(--muted)">Free</span>{% endif %}</div>
+      <div><span style="color:var(--muted)">Joined:</span> {{ user.created_at }}</div>
+    </div>
+    {% if not user.is_premium %}<a href="/premium" class="btn btn-premium btn-sm mt-3">✦ Upgrade to Premium</a>{% endif %}
+  </div>
+
+  <div style="background:rgba(224,80,96,.05);border:1px solid rgba(224,80,96,.15);border-radius:var(--r);padding:18px">
+    <div style="font-weight:700;margin-bottom:7px;color:var(--red)">Danger Zone</div>
+    <button class="btn btn-danger btn-sm" onclick="if(confirm('Sign out everywhere?'))fetch('/api/logout',{method:'POST'}).then(()=>location.href='/')">Sign Out Everywhere</button>
+  </div>
+</div>
+
+<script>
+async function upAv(inp){const fd=new FormData();fd.append('avatar',inp.files[0]);const r=await fetch('/api/upload-avatar',{method:'POST',body:fd});const d=await r.json();if(d.success){showToast('Avatar updated ✓','success');setTimeout(()=>location.reload(),800);}}
+async function upLogo(inp){const fd=new FormData();fd.append('logo',inp.files[0]);const r=await fetch('/api/upload-logo',{method:'POST',body:fd});const d=await r.json();if(d.success){showToast('Logo set as watermark ✓','success');setTimeout(()=>location.reload(),800);}}
+async function save(){const p={bio:document.getElementById('s-bio').value,website:document.getElementById('s-web').value,contact:document.getElementById('s-contact').value,watermark_text:document.getElementById('s-wm').value,display_name:document.getElementById('s-dname').value};const r=await fetch('/api/update-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();if(d.success)showToast('Saved ✓','success');}
+async function setRole(role){const r=await fetch('/api/change-role',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})});const d=await r.json();if(d.success){showToast(`Role changed to ${role} ✓`,'success');setTimeout(()=>location.reload(),800);}else showToast(d.error||'Error','error');}
+async function setPrivacy(priv){const r=await fetch('/api/update-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile_privacy:priv})});const d=await r.json();if(d.success){['pub','priv'].forEach(p=>{const el=document.getElementById('priv-'+p);if(el)el.style.borderColor='var(--border)';});const active=document.getElementById('priv-'+(priv==='public'?'pub':'priv'));if(active)active.style.borderColor='rgba(212,168,67,.5)';showToast(`Profile set to ${priv} ✓`,'success');}}
+</script>
+{% endblock %}

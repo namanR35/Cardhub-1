@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Community – CardHub{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:32px;padding-bottom:48px">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-size:.73rem;color:var(--gold);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Discover Designers</div>
+      <h1 style="font-family:var(--font-d);font-size:2rem;font-weight:700">Community</h1>
+      <p style="color:var(--muted);margin-top:4px">Follow designers, explore profiles, build connections.</p>
+    </div>
+    <form method="get" action="/community" style="display:flex;gap:7px">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search designers…" class="form-input" style="max-width:220px;border-radius:100px;padding-left:14px"/>
+      <button type="submit" class="btn btn-gold btn-sm">Search</button>
+      {% if q %}<a href="/community" class="btn btn-outline btn-sm">Clear</a>{% endif %}
+    </form>
+  </div>
+
+  {% if user %}
+  <!-- Follow Requests -->
+  <div id="follow-requests-wrap" style="margin-bottom:20px">
+    <div id="follow-requests-list"></div>
+  </div>
+  {% endif %}
+
+  <!-- DESIGNERS GRID -->
+  {% if all_users %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+    {% for u in all_users %}
+    {% set fc = get_follower_count(u.id) %}
+    {% set tc = user_template_count(u.id) %}
+    {% set has_star = earns_star(u.id) %}
+    {% set is_me = user and user.id == u.id %}
+    {% set i_follow = u.id in my_following %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;text-align:center;transition:all .2s" onmouseover="this.style.borderColor='rgba(212,168,67,.25)'" onmouseout="this.style.borderColor='var(--border)'">
+      <a href="/profile/{{ u.username }}">
+        {% if u.avatar %}<img src="{{ u.avatar }}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin:0 auto 10px;border:2px solid var(--border2)"/>
+        {% else %}<div style="width:60px;height:60px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:1.5rem;color:var(--gold);margin:0 auto 10px;border:2px solid var(--border2)">{{ u.username[0].upper() }}</div>{% endif %}
+      </a>
+      <div style="font-weight:700;font-size:.95rem;display:flex;align-items:center;justify-content:center;gap:4px">
+        <a href="/profile/{{ u.username }}" style="color:var(--text)">{{ u.username }}</a>
+        {% if has_star %}<span title="Top Creator: 100+ followers or 50+ uploads" style="color:#ffd700;font-size:1rem">⭐</span>{% endif %}
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin:2px 0 6px">@{{ u.username }}</div>
+      {% if u.role in ['uploader','admin'] %}<span class="tag tag-gold" style="font-size:.62rem">Designer</span>{% endif %}
+      {% if u.is_premium %}<span class="tag tag-purple" style="font-size:.62rem">Premium</span>{% endif %}
+      {% if u.bio %}<div style="font-size:.78rem;color:var(--muted);margin-top:8px;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">{{ u.bio }}</div>{% endif %}
+      <div style="display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:.78rem;color:var(--muted)">
+        <span><strong style="color:var(--text)">{{ fc }}</strong> followers</span>
+        <span><strong style="color:var(--text)">{{ tc }}</strong> designs</span>
+      </div>
+      {% if user and not is_me %}
+      <button onclick="followUser('{{ u.id }}', '{{ u.username }}', this)"
+              class="btn btn-sm w-full mt-3 {% if i_follow %}btn-outline{% else %}btn-gold{% endif %}"
+              id="follow-btn-{{ u.id }}">
+        {% if i_follow %}✓ Following{% else %}+ Follow{% endif %}
+      </button>
+      {% elif is_me %}
+      <a href="/profile/{{ u.username }}" class="btn btn-ghost btn-sm w-full mt-3">Your Profile</a>
+      {% else %}
+      <a href="/login" class="btn btn-outline btn-sm w-full mt-3">Sign in to Follow</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty"><span class="empty-icon">👥</span><h3>No designers found</h3><p>{% if q %}Try different keywords.{% else %}Be the first to join!{% endif %}</p></div>
+  {% endif %}
+</div>
+<script>
+async function followUser(uid, username, btn) {
+  const r = await fetch('/api/follow/'+uid, {method:'POST'});
+  const d = await r.json();
+  if (!d.success) { showToast(d.error||'Error','error'); return; }
+  if (d.action==='followed') { btn.textContent='✓ Following'; btn.className='btn btn-sm w-full mt-3 btn-outline'; showToast(`Following @${username} ✓`,'success'); }
+  else if (d.action==='unfollowed') { btn.textContent='+ Follow'; btn.className='btn btn-sm w-full mt-3 btn-gold'; showToast(`Unfollowed @${username}`); }
+  else if (d.action==='requested') { btn.textContent='⏳ Requested'; btn.disabled=true; showToast(`Follow request sent to @${username}`,'success'); }
+}
+
+// Load follow requests for logged-in user
+{% if user %}
+(async()=>{
+  const r = await fetch('/api/follow-requests');
+  const reqs = await r.json();
+  if (!reqs.length) return;
+  const wrap = document.getElementById('follow-requests-list');
+  wrap.innerHTML = `<div style="background:var(--surface);border:1px solid rgba(212,168,67,.2);border-radius:var(--r);padding:16px;margin-bottom:4px">
+    <div style="font-weight:700;color:var(--gold);margin-bottom:10px;font-size:.9rem">📬 Follow Requests (${reqs.length})</div>
+    ${reqs.map(u=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="font-weight:600;font-size:.875rem;flex:1">@${u.username}</div>
+      <button onclick="handleReq('${u.id}','accept',this.parentElement)" class="btn btn-gold btn-xs">Accept</button>
+      <button onclick="handleReq('${u.id}','decline',this.parentElement)" class="btn btn-danger btn-xs">Decline</button>
+    </div>`).join('')}
+  </div>`;
+})();
+async function handleReq(uid, action, row) {
+  const r = await fetch('/api/follow-request/'+uid+'/'+action, {method:'POST'});
+  const d = await r.json();
+  if (d.success) { row.remove(); showToast(action==='accept'?'Request accepted ✓':'Request declined','success'); }
+}
+{% endif %}
+</script>
+{% endblock %}

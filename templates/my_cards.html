@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}My Cards – CardHub{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:32px;padding-bottom:48px">
+  <div class="flex justify-between items-center mb-4" style="flex-wrap:wrap;gap:12px">
+    <div>
+      <h1 style="font-family:var(--font-d);font-size:2rem;font-weight:700">My Saved Cards</h1>
+      <p style="color:var(--muted)">Cards you designed and saved using the full editor</p>
+    </div>
+    <a href="/explore" class="btn btn-gold">+ Create New</a>
+  </div>
+  {% if cards %}
+  <div class="cards-grid cards-grid-lg">
+    {% for c in cards|reverse %}
+    <div class="tmpl-card" id="card-{{ c.id }}">
+      <div style="position:absolute;top:8px;right:8px;z-index:20;display:flex;gap:5px;opacity:0;transition:opacity .2s" class="card-acts">
+        <button class="btn btn-danger btn-xs" onclick="delCard('{{ c.id }}')">✕</button>
+      </div>
+      <div class="tmpl-thumb" onclick="location.href='/editor/{{ c.get('template_id','birthday-gold') }}'">
+        <div class="tmpl-thumb-placeholder" style="background:{{ c.bg or 'var(--surface2)' }};color:{{ c.text_color or '#fff' }};{% if c.bg_image %}background-image:url('{{ c.bg_image }}');background-size:cover{% endif %}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:10px">
+            <span style="font-size:1.8rem">{{ c.emoji or '🎨' }}</span>
+            <span style="font-family:var(--font-d);font-size:1.1rem;font-weight:700">{{ c.title or 'My Card' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="tmpl-meta">
+        <div class="tmpl-name">{{ c.title or 'Untitled Card' }}</div>
+        <div style="font-size:.72rem;color:var(--muted)">Saved {{ c.saved_at }}</div>
+        {% if c.rsvp_enabled %}<span class="tag tag-green" style="font-size:.62rem">RSVP</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty"><span class="empty-icon">🎨</span><h3>No saved cards yet</h3><p>Use the full editor to design and save personal cards.</p><a href="/explore" class="btn btn-gold mt-3">Browse Templates</a></div>
+  {% endif %}
+</div>
+<style>.tmpl-card:hover .card-acts{opacity:1!important}</style>
+<script>
+async function delCard(id){if(!confirm('Delete this card?'))return;const r=await fetch('/api/delete-card/'+id,{method:'DELETE'});const d=await r.json();if(d.success){const el=document.getElementById('card-'+id);el.style.transition='all .3s';el.style.transform='scale(.85)';el.style.opacity='0';setTimeout(()=>el.remove(),300);showToast('Deleted','success');}}
+</script>
+{% endblock %}

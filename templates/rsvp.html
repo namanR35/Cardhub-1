@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}RSVP – CardHub{% endblock %}
+{% block content %}
+<div style="max-width:620px;margin:0 auto;padding:36px 24px">
+  {% if card %}
+  <div style="background:{{ card.bg or 'var(--surface2)' }};border-radius:var(--r-lg);overflow:hidden;margin-bottom:24px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;{% if card.bg_image %}background-image:url('{{ card.bg_image }}');background-size:cover;background-position:center{% endif %}">
+    <div><span style="font-size:2.5rem">{{ card.emoji or '🎉' }}</span>
+    <h2 style="font-family:var(--font-d);font-size:1.8rem;font-weight:700;color:{{ card.text_color or '#fff' }};margin-top:8px">{{ card.title }}</h2>
+    <p style="color:{{ card.text_color or '#fff' }};opacity:.8;margin-top:6px">{{ card.subtitle }}</p></div>
+  </div>
+  {% endif %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:20px" id="rsvp-form">
+    <h2 style="font-family:var(--font-d);font-size:1.4rem;margin-bottom:16px">RSVP for this event</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      {% for s,l in [('attending','✓ Attending'),('maybe','? Maybe'),('declined','✕ Decline')] %}
+      <div style="padding:9px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;transition:all .15s;font-size:.84rem;font-weight:600" id="s-{{ s }}" onclick="selStatus('{{ s }}')">{{ l }}</div>
+      {% endfor %}
+    </div>
+    <input type="hidden" id="rsvp-status" value="attending"/>
+    <div class="form-group"><label class="form-label">Your Name *</label><input class="form-input" id="rsvp-name" placeholder="Full name"/></div>
+    <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="rsvp-email" placeholder="your@email.com"/></div>
+    <div class="form-group"><label class="form-label">Guests</label><input type="number" class="form-input" id="rsvp-guests" value="1" min="1" max="20"/></div>
+    <div class="form-group"><label class="form-label">Message (optional)</label><textarea class="form-input" id="rsvp-msg" rows="2" style="resize:vertical"></textarea></div>
+    <button class="btn btn-gold btn-full" onclick="submitRSVP('{{ card_id }}')">Send RSVP</button>
+  </div>
+  {% if rsvps %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px">
+    <div style="font-weight:600;margin-bottom:12px">Responses ({{ rsvps|length }})</div>
+    {% for r in rsvps %}
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:{% if r.status=='attending' %}var(--green){% elif r.status=='maybe' %}var(--gold){% else %}var(--red){% endif %}"></div>
+      <div><div style="font-weight:600;font-size:.875rem">{{ r.name }}</div><div style="font-size:.75rem;color:var(--muted)">{{ r.guests }} guest{{ 's' if r.guests!=1 }} · {{ r.status|capitalize }} · {{ r.submitted_at }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+<script>
+selStatus('attending');
+function selStatus(s){document.getElementById('rsvp-status').value=s;['attending','maybe','declined'].forEach(x=>{const el=document.getElementById('s-'+x);if(el){el.style.background=x===s?'var(--gold-bg)':'var(--surface2)';el.style.borderColor=x===s?'rgba(212,168,67,.4)':'var(--border)';el.style.color=x===s?'var(--gold)':'var(--text)';}});}
+async function submitRSVP(cid){const name=document.getElementById('rsvp-name').value.trim();if(!name){showToast('Please enter your name','error');return;}const p={card_id:cid,name,email:document.getElementById('rsvp-email').value,status:document.getElementById('rsvp-status').value,guests:parseInt(document.getElementById('rsvp-guests').value)||1,message:document.getElementById('rsvp-msg').value};const r=await fetch('/api/rsvp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();if(d.success){document.getElementById('rsvp-form').innerHTML=`<div style="text-align:center;padding:28px"><div style="font-size:2.5rem;margin-bottom:12px">🎉</div><h3 style="font-family:var(--font-d);font-size:1.4rem;margin-bottom:7px">Thank you, ${name}!</h3><p style="color:var(--muted)">Your RSVP has been recorded.</p></div>`;}}
+</script>
+{% endblock %}

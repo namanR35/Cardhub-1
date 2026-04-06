@@ -1,0 +1,620 @@
+{% extends "base.html" %}
+{% block title %}Edit – CardHub{% endblock %}
+
+{% block content %}
+<div class="editor-layout">
+
+  <!-- ══ LEFT PANEL ══ -->
+  <aside class="editor-panel" id="left-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" data-tab="text">Text</div>
+      <div class="panel-tab" data-tab="media">Media</div>
+      <div class="panel-tab" data-tab="design">Design</div>
+      <div class="panel-tab" data-tab="export">Export</div>
+    </div>
+
+    <!-- ══ TEXT TAB ══ -->
+    <div class="panel-body panel-tab-content active" id="tab-text">
+
+      <div class="tool-section">
+        <span class="tool-label">Add Elements</span>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="addTextEl('Heading', 32, 700)">+ Heading</button>
+          <button class="btn btn-ghost btn-sm" onclick="addTextEl('Subheading', 20, 500)">+ Subheading</button>
+          <button class="btn btn-ghost btn-sm" onclick="addTextEl('Body text', 15, 400)">+ Body Text</button>
+          <button class="btn btn-ghost btn-sm" onclick="addTextEl('Date • Venue', 12, 400)">+ Details / Caption</button>
+        </div>
+      </div>
+
+      <!-- SELECTED ELEMENT PROPERTIES -->
+      <div id="el-props" class="hidden">
+        <div class="tool-section" style="background:var(--accent-bg);border-bottom:2px solid rgba(201,168,76,.3)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span class="tool-label" style="margin:0">Selected Element</span>
+            <button class="btn btn-danger btn-xs" onclick="deleteSelected()">Delete</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Content (click text on canvas too)</label>
+            <textarea class="form-input" id="prop-content" rows="3"
+              oninput="updateSelectedProp('content', this.value)"
+              style="resize:vertical;font-size:.875rem"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <span>Font Size</span>
+              <span id="prop-size-val" class="text-accent">16px</span>
+            </label>
+            <div class="stepper">
+              <button class="stepper-btn" onclick="nudgeFontSize(-1)">−</button>
+              <span class="stepper-val" id="prop-size-disp">16</span>
+              <button class="stepper-btn" onclick="nudgeFontSize(1)">+</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Font Weight</label>
+            <div class="fmt-btn-row">
+              <button class="fmt-btn" onclick="updateSelectedProp('weight','300')" title="Light">𝗟</button>
+              <button class="fmt-btn" onclick="updateSelectedProp('weight','400')" title="Normal">N</button>
+              <button class="fmt-btn" onclick="updateSelectedProp('weight','600')" title="Semi-Bold">S</button>
+              <button class="fmt-btn" onclick="updateSelectedProp('weight','700')" title="Bold"><b>B</b></button>
+              <button class="fmt-btn" onclick="updateSelectedProp('weight','900')" title="Black"><b style="font-weight:900">X</b></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Text Alignment</label>
+            <div class="fmt-btn-row">
+              <button class="fmt-btn" onclick="updateSelectedProp('align','left');setAlignActive(this)" title="Left align">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="2" rx="1"/><rect x="1" y="7" width="9" height="2" rx="1"/><rect x="1" y="11" width="11" height="2" rx="1"/></svg>
+              </button>
+              <button class="fmt-btn fmt-btn-active" onclick="updateSelectedProp('align','center');setAlignActive(this)" title="Center">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="2" rx="1"/><rect x="3.5" y="7" width="9" height="2" rx="1"/><rect x="2" y="11" width="12" height="2" rx="1"/></svg>
+              </button>
+              <button class="fmt-btn" onclick="updateSelectedProp('align','right');setAlignActive(this)" title="Right align">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="2" rx="1"/><rect x="6" y="7" width="9" height="2" rx="1"/><rect x="3" y="11" width="12" height="2" rx="1"/></svg>
+              </button>
+              <button class="fmt-btn" onclick="updateSelectedProp('align','justify');setAlignActive(this)" title="Justify">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="11" width="14" height="2" rx="1"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Text Colour</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="color" class="form-input" id="prop-color" value="#ffffff"
+                oninput="updateSelectedProp('color', this.value)" style="width:50px;height:36px"/>
+              <div class="color-swatches">
+                {% for c in ['#ffffff','#000000','#ffd700','#ff6b6b','#4ecdc4','#e8a0b4','#a8e6cf','#1a1a2e'] %}
+                <div class="color-swatch" style="background:{{ c }}"
+                  onclick="updateSelectedProp('color','{{ c }}');document.getElementById('prop-color').value='{{ c }}'"></div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Font Family</label>
+            <select class="form-input" id="prop-font" onchange="updateSelectedProp('font', this.value)" style="font-size:.8rem">
+              <optgroup label="— Serif —">
+                {% for f in ['Playfair Display','Cormorant Garamond','Lora','Merriweather','IM Fell English','Libre Baskerville','Crimson Text','Bodoni Moda','Abril Fatface','Spectral'] %}
+                <option value="{{ f }}">{{ f }}</option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="— Sans Serif —">
+                {% for f in ['Montserrat','Raleway','Nunito','Poppins','Josefin Sans','DM Sans','Inter','Outfit','Urbanist','Quicksand'] %}
+                <option value="{{ f }}">{{ f }}</option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="— Display —">
+                {% for f in ['Bebas Neue','Oswald','Anton','Teko','Barlow Condensed','Black Han Sans','Righteous','Boogaloo','Pacifico','Lobster'] %}
+                <option value="{{ f }}">{{ f }}</option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="— Handwriting —">
+                {% for f in ['Dancing Script','Great Vibes','Sacramento','Satisfy','Parisienne','Allura','Caveat','Kalam','Nothing You Could Do','Alex Brush'] %}
+                <option value="{{ f }}">{{ f }}</option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="— Mono / Classic —">
+                {% for f in ['Courier New','Georgia','Trebuchet MS','Palatino Linotype','Times New Roman','Space Mono','Source Code Pro'] %}
+                <option value="{{ f }}">{{ f }}</option>
+                {% endfor %}
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Opacity</label>
+            <input type="range" class="form-input" min="10" max="100" value="100" id="prop-opacity"
+              oninput="updateSelectedProp('opacity', this.value/100)"/>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn btn-ghost btn-xs" onclick="bringForward()">↑ Forward</button>
+            <button class="btn btn-ghost btn-xs" onclick="sendBackward()">↓ Back</button>
+            <button class="btn btn-ghost btn-xs" onclick="duplicateSelected()">⧉ Duplicate</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMAGE ELEMENT PROPS -->
+      <div id="img-props" class="hidden">
+        <div class="tool-section" style="background:rgba(76,143,224,.08);border-bottom:2px solid rgba(76,143,224,.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span class="tool-label" style="margin:0">Image / Logo</span>
+            <button class="btn btn-danger btn-xs" onclick="deleteSelected()">Delete</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Crop Image</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <button class="btn btn-ghost btn-xs" onclick="openCropModal('image')">✂ Crop</button>
+              <button class="btn btn-ghost btn-xs" onclick="resetCrop()">↺ Reset</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fit Mode</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <button class="align-btn" onclick="updateSelectedProp('fit','contain')">Contain</button>
+              <button class="align-btn" onclick="updateSelectedProp('fit','cover')">Cover</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <span>Width</span><span id="img-w-val" class="text-accent">120px</span>
+            </label>
+            <input type="range" class="form-input" min="30" max="400" value="120" id="img-w-range"
+              oninput="resizeSelectedImage('w', this.value)"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <span>Height</span><span id="img-h-val" class="text-accent">120px</span>
+            </label>
+            <input type="range" class="form-input" min="30" max="400" value="120" id="img-h-range"
+              oninput="resizeSelectedImage('h', this.value)"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Corner Radius</label>
+            <input type="range" class="form-input" min="0" max="50" value="0" id="img-radius"
+              oninput="updateSelectedProp('radius', this.value)"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Opacity</label>
+            <input type="range" class="form-input" min="10" max="100" value="100" id="img-opacity"
+              oninput="updateSelectedProp('opacity', this.value/100)"/>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn btn-ghost btn-xs" onclick="bringForward()">↑ Forward</button>
+            <button class="btn btn-ghost btn-xs" onclick="sendBackward()">↓ Back</button>
+            <button class="btn btn-ghost btn-xs" onclick="duplicateSelected()">⧉ Duplicate</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tool-section">
+        <span class="tool-label">Stickers</span>
+        <div class="sticker-grid">
+          {% for s in ['⭐','❤','🌸','🎈','🎊','🌺','🦋','🌙','☀','🌈','🍰','🥂','💐','🎵','📍','✉','🏆','🎁','🌿','🔥','💫','🌟','🎶','🦚','🎯','🎨','🎭','🌴'] %}
+          <div class="sticker-item" onclick="addStickerEl('{{ s }}')">{{ s }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══ MEDIA TAB ══ -->
+    <div class="panel-body panel-tab-content" id="tab-media">
+      <div class="tool-section">
+        <span class="tool-label">Background Image</span>
+        <div class="upload-zone" id="bg-zone">
+          <span class="upload-zone-icon">🖼</span>
+          <div class="upload-zone-text" id="bg-zone-txt">Click to upload background<br><span style="font-size:.68rem;opacity:.6">JPG, PNG, WebP</span></div>
+          <input type="file" accept="image/*" onchange="uploadBg(this)"/>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="btn btn-ghost btn-xs" style="flex:1" onclick="openCropModal('bg')" id="crop-bg-btn" disabled>✂ Crop BG</button>
+          <button class="btn btn-ghost btn-xs" style="flex:1" onclick="clearBg()" id="clear-bg-btn" disabled>✕ Remove</button>
+        </div>
+        <div class="form-group mt-3">
+          <label class="form-label">BG Opacity</label>
+          <input type="range" class="form-input" min="10" max="100" value="100" id="bg-opacity"
+            oninput="setBgOpacity(this.value)"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">BG Position</label>
+          <select class="form-input" onchange="setBgPosition(this.value)">
+            <option value="center">Center</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tool-section">
+        <span class="tool-label">Add Logo / Image</span>
+        <div class="upload-zone">
+          <span class="upload-zone-icon">📷</span>
+          <div class="upload-zone-text">Click to upload logo or photo<br><span style="font-size:.68rem;opacity:.6">Will be added as draggable element</span></div>
+          <input type="file" accept="image/*" onchange="uploadImageEl(this)"/>
+        </div>
+      </div>
+
+      <div class="tool-section">
+        <span class="tool-label">QR Code</span>
+        <div class="form-group">
+          <label class="form-label">URL / Link</label>
+          <input class="form-input" id="qr-url" placeholder="https://your-link.com" oninput="previewQR(this.value)"/>
+        </div>
+        <div id="qr-wrap" style="text-align:center;padding:8px 0">
+          <div style="width:100px;height:100px;background:#f8f8f8;border-radius:8px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#888" id="qr-preview">QR preview</div>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-full mt-2" onclick="addQREl()" id="add-qr-btn" disabled>+ Add QR to Card</button>
+      </div>
+    </div>
+
+    <!-- ══ DESIGN TAB ══ -->
+    <div class="panel-body panel-tab-content" id="tab-design">
+      <div class="tool-section">
+        <span class="tool-label">Background Colour</span>
+        <div class="form-row mb-3">
+          <div>
+            <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:4px">Colour 1</div>
+            <input type="color" class="form-input" id="bg-c1" value="#b8860b" oninput="applyBgGradient()"/>
+          </div>
+          <div>
+            <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:4px">Colour 2</div>
+            <input type="color" class="form-input" id="bg-c2" value="#ffd700" oninput="applyBgGradient()"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gradient Direction</label>
+          <select class="form-input" id="bg-dir" onchange="applyBgGradient()">
+            <option value="135deg">Diagonal ↘</option>
+            <option value="to right">Left → Right</option>
+            <option value="to bottom">Top → Bottom</option>
+            <option value="to top right">Top Right ↗</option>
+          </select>
+        </div>
+        <span class="tool-label">Quick Palettes</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          {% for p in [
+            ('Gold','#b8860b','#ffd700'),('Rose','#c9748b','#f5c6d0'),
+            ('Night','#1a0533','#4a0080'),('Navy','#0d1b4b','#1a3080'),
+            ('Mint','#a8e6cf','#dcedc1'),('Ruby','#8b1a2e','#c0392b'),
+            ('Slate','#1c2340','#2d3561'),('Sunset','#ff6b35','#f7c59f'),
+            ('Forest','#1b4332','#2d6a4f'),('Ocean','#023e8a','#00b4d8'),
+          ] %}
+          <button class="btn btn-ghost btn-xs" style="justify-content:flex-start;gap:6px"
+            onclick="setPalette('{{ p[1] }}','{{ p[2] }}')">
+            <span style="width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,{{ p[1] }},{{ p[2] }});display:inline-block;flex-shrink:0"></span>
+            {{ p[0] }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="tool-section">
+        <span class="tool-label">Card Shape</span>
+        <div class="form-group">
+          <label class="form-label"><span>Corner Radius</span><span id="card-radius-val" class="text-accent">14px</span></label>
+          <input type="range" class="form-input" min="0" max="40" value="14" oninput="setCardRadius(this.value)"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Canvas Size</label>
+          <select class="form-input" onchange="setCanvasSize(this.value)">
+            <option value="600x375">Standard 16:10</option>
+            <option value="500x500">Square 1:1</option>
+            <option value="500x700">Portrait A5</option>
+            <option value="600x340">Wide 16:9</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label"><span>Grid</span></label>
+          <div class="toggle-row">
+            <span class="toggle-label">Show grid lines</span>
+            <div class="toggle" id="grid-tog" onclick="toggleGrid(this)"></div>
+          </div>
+          <div class="toggle-row mt-2">
+            <span class="toggle-label">Snap to grid</span>
+            <div class="toggle" id="snap-tog" onclick="this.classList.toggle('on');window.snapGrid=this.classList.contains('on')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Brand Kits -->
+      {% if brand_kits %}
+      <div class="tool-section">
+        <span class="tool-label">Brand Kits</span>
+        {% for kit in brand_kits %}
+        <div class="brand-kit-row mt-2" onclick="applyBrandKit({{ kit|tojson }})">
+          <div class="brand-kit-colors">
+            {% for c in kit.colors[:5] %}
+            <div class="brand-kit-dot" style="background:{{ c }}"></div>
+            {% endfor %}
+          </div>
+          <span class="brand-kit-name">{{ kit.name }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="tool-section">
+        <span class="tool-label">AI Message Ideas</span>
+        <button class="btn btn-ghost btn-sm btn-full" onclick="loadAI()" id="ai-btn">🤖 Generate Ideas</button>
+        <div class="ai-suggestions hidden" id="ai-box"></div>
+      </div>
+    </div>
+
+    <!-- ══ EXPORT TAB ══ -->
+    <div class="panel-body panel-tab-content" id="tab-export">
+      <div class="tool-section">
+        <span class="tool-label">Download Card</span>
+        <div class="export-opts">
+          <div class="export-opt" onclick="exportAs('png')">
+            <span class="export-opt-type">PNG</span>
+            <span class="export-opt-desc">Best quality</span>
+          </div>
+          <div class="export-opt" onclick="exportAs('jpg')">
+            <span class="export-opt-type">JPG</span>
+            <span class="export-opt-desc">Smaller file</span>
+          </div>
+          <div class="export-opt" onclick="exportAs('pdf')">
+            <span class="export-opt-type">PDF</span>
+            <span class="export-opt-desc">Print ready</span>
+          </div>
+          <div class="export-opt" onclick="exportAs('svg')">
+            <span class="export-opt-type">SVG</span>
+            <span class="export-opt-desc">Vector</span>
+          </div>
+        </div>
+      </div>
+      <div class="tool-section">
+        <span class="tool-label">Share</span>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(location.href);showToast('Link copied','success')">🔗 Copy Link</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.open('https://wa.me/?text='+encodeURIComponent(location.href),'_blank')">💬 WhatsApp</button>
+          <button class="btn btn-ghost btn-sm" onclick="location.href='mailto:?subject=Invitation&body='+encodeURIComponent(location.href)">📧 Email</button>
+        </div>
+      </div>
+      <div class="tool-section">
+        <span class="tool-label">RSVP</span>
+        <div class="toggle-row">
+          <span class="toggle-label">Enable RSVP tracking</span>
+          <div class="toggle" id="rsvp-tog" onclick="this.classList.toggle('on');window.rsvpEnabled=this.classList.contains('on');document.getElementById('rsvp-lnk').classList.toggle('hidden',!window.rsvpEnabled)"></div>
+        </div>
+        <div class="hidden mt-2" id="rsvp-lnk" style="font-size:.75rem;color:var(--text-muted)">Save the card to get your RSVP link.</div>
+      </div>
+    </div>
+
+    <!-- BOTTOM SAVE BAR -->
+    <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:7px;flex-shrink:0">
+      <button class="btn btn-primary btn-full" onclick="saveCard()">💾 Save Card</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="undo()" title="Ctrl+Z">↩ Undo</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="redo()" title="Ctrl+Y">↪ Redo</button>
+        <a href="/discover" class="btn btn-outline btn-sm" style="flex:1">✕ Exit</a>
+      </div>
+      <div style="font-size:.7rem;color:var(--text-faint);text-align:center">Ctrl+S save · Ctrl+Z undo · Del delete selected</div>
+    </div>
+  </aside>
+
+  <!-- ══ CANVAS AREA ══ -->
+  <div class="editor-canvas" id="editor-canvas" onclick="deselectAll(event)">
+    <div class="canvas-bg-pattern"></div>
+
+    <!-- Top toolbar -->
+    <div class="canvas-toolbar">
+      <button class="canvas-tool-btn" onclick="zoomOut()" title="Zoom out">−</button>
+      <span class="canvas-zoom" id="zoom-lbl">100%</span>
+      <button class="canvas-tool-btn" onclick="zoomIn()" title="Zoom in">+</button>
+      <div class="canvas-tool-sep"></div>
+      <button class="canvas-tool-btn" onclick="zoomFit()" title="Fit">⊡</button>
+      <div class="canvas-tool-sep"></div>
+      <button class="canvas-tool-btn" id="btn-select" onclick="setActiveTool('select',this)" title="Select (V)" style="background:var(--accent-bg);color:var(--accent)">↖ Select</button>
+      <button class="canvas-tool-btn" id="btn-text" onclick="setActiveTool('text',this)" title="Add text (T)">T Text</button>
+    </div>
+
+    <!-- THE CARD -->
+    <div id="canvas-wrap" style="transform-origin:center center;position:relative">
+      <div id="card" style="
+        width:600px;
+        background:{{ template.bg }};
+        border-radius:14px;
+        overflow:hidden;
+        position:relative;
+        box-shadow:0 20px 80px rgba(0,0,0,.6);
+        border:2px solid rgba(255,255,255,.07);
+        cursor:default;
+        user-select:none;
+      ">
+        <!-- BG Image layer -->
+        <div id="bg-img-layer" style="
+          position:absolute;inset:0;
+          background-size:cover;background-position:center;
+          opacity:1;pointer-events:none;z-index:0;
+        "></div>
+
+        <!-- Grid overlay -->
+        <div id="grid-overlay" style="
+          position:absolute;inset:0;z-index:1;pointer-events:none;display:none;
+          background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),
+                           linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);
+          background-size:40px 40px;
+        "></div>
+
+        <!-- Elements layer — all draggable elements go here -->
+        <div id="elements" style="position:absolute;inset:0;z-index:2;overflow:hidden"></div>
+
+        <!-- Invisible spacer to give card height -->
+        <div id="card-spacer" style="height:375px;pointer-events:none"></div>
+      </div>
+
+      <!-- Selection box indicator -->
+      <div id="sel-indicator" style="
+        position:absolute;border:2px solid var(--accent);border-radius:4px;
+        pointer-events:none;display:none;z-index:999;
+        box-shadow:0 0 0 1px rgba(201,168,76,.3);
+      "></div>
+    </div>
+
+    <div class="canvas-hint">Click to select · Double-click text to edit · Drag to move · Handles to resize</div>
+  </div>
+
+</div>
+
+<!-- ══ CROP MODAL ══ -->
+<div class="modal-backdrop" id="crop-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <span class="modal-title">Crop Image</span>
+      <button class="btn btn-ghost btn-icon" onclick="closeCropModal()">✕</button>
+    </div>
+    <div style="position:relative;width:100%;max-height:380px;overflow:hidden;background:#111;border-radius:10px;display:flex;align-items:center;justify-content:center" id="crop-container">
+      <img id="crop-img" style="max-width:100%;max-height:380px;display:block;user-select:none"/>
+      <div id="crop-box" style="
+        position:absolute;border:2px solid var(--accent);cursor:move;
+        box-shadow:0 0 0 9999px rgba(0,0,0,.55);
+      ">
+        <div class="crop-handle" style="top:-5px;left:-5px;cursor:nwse-resize" data-dir="nw"></div>
+        <div class="crop-handle" style="top:-5px;right:-5px;cursor:nesw-resize" data-dir="ne"></div>
+        <div class="crop-handle" style="bottom:-5px;left:-5px;cursor:nesw-resize" data-dir="sw"></div>
+        <div class="crop-handle" style="bottom:-5px;right:-5px;cursor:nwse-resize" data-dir="se"></div>
+        <div class="crop-handle" style="top:50%;left:-5px;transform:translateY(-50%);cursor:ew-resize" data-dir="w"></div>
+        <div class="crop-handle" style="top:50%;right:-5px;transform:translateY(-50%);cursor:ew-resize" data-dir="e"></div>
+        <div class="crop-handle" style="top:-5px;left:50%;transform:translateX(-50%);cursor:ns-resize" data-dir="n"></div>
+        <div class="crop-handle" style="bottom:-5px;left:50%;transform:translateX(-50%);cursor:ns-resize" data-dir="s"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary btn-full" onclick="applyCrop()">✓ Apply Crop</button>
+      <button class="btn btn-outline" onclick="closeCropModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Template seed data -->
+<script id="tmpl-seed" type="application/json">{{ template | tojson }}</script>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:wght@300;400;600;700&family=Lora:wght@400;600;700&family=Merriweather:wght@300;400;700&family=IM+Fell+English&family=Libre+Baskerville:wght@400;700&family=Crimson+Text:wght@400;600;700&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Abril+Fatface&family=Spectral:wght@300;400;600;700&family=Montserrat:wght@300;400;600;700;800&family=Raleway:wght@300;400;600;700;800&family=Nunito:wght@300;400;600;700&family=Poppins:wght@300;400;500;600;700&family=Josefin+Sans:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&family=Outfit:wght@300;400;600;700&family=Urbanist:wght@300;400;600;700&family=Quicksand:wght@400;500;600;700&family=Bebas+Neue&family=Oswald:wght@300;400;600;700&family=Anton&family=Teko:wght@400;600;700&family=Barlow+Condensed:wght@400;600;700;800&family=Righteous&family=Boogaloo&family=Pacifico&family=Lobster&family=Dancing+Script:wght@400;600;700&family=Great+Vibes&family=Sacramento&family=Satisfy&family=Parisienne&family=Allura&family=Caveat:wght@400;600;700&family=Kalam:wght@300;400;700&family=Alex+Brush&family=Space+Mono:wght@400;700&family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+.crop-handle {
+  position:absolute;width:10px;height:10px;
+  background:var(--gold);border:2px solid #fff;border-radius:2px;
+}
+
+/* ── Format button row (alignment / weight) ── */
+.fmt-btn-row {
+  display:flex;gap:4px;
+}
+.fmt-btn {
+  flex:1;display:flex;align-items:center;justify-content:center;
+  height:34px;border-radius:7px;
+  background:var(--surface3);color:var(--text);
+  border:1.5px solid var(--border);
+  font-size:.8rem;font-family:inherit;cursor:pointer;
+  transition:all .15s;
+}
+.fmt-btn:hover {
+  background:var(--surface2);border-color:var(--border2);color:var(--gold);
+}
+.fmt-btn.fmt-btn-active, .fmt-btn:active {
+  background:var(--gold-bg);border-color:rgba(212,168,67,.5);color:var(--gold);
+}
+.fmt-btn svg { pointer-events:none; }
+
+/* Element wrapper on canvas */
+.el-wrap {
+  position:absolute;
+  cursor:move;
+  user-select:none;
+}
+.el-wrap.selected > .el-content {
+  outline:2px solid var(--gold);
+  outline-offset:2px;
+  border-radius:3px;
+}
+.el-content {
+  position:relative;
+}
+/* resize handles on selected */
+.el-wrap.selected .rh {
+  display:block;
+}
+.rh {
+  display:none;
+  position:absolute;
+  width:9px;height:9px;
+  background:var(--gold);
+  border:2px solid #0b0c10;
+  border-radius:2px;
+  z-index:10;
+}
+.rh.tl{top:-5px;left:-5px;cursor:nwse-resize}
+.rh.tr{top:-5px;right:-5px;cursor:nesw-resize}
+.rh.bl{bottom:-5px;left:-5px;cursor:nesw-resize}
+.rh.br{bottom:-5px;right:-5px;cursor:nwse-resize}
+.rh.tm{top:-5px;left:50%;transform:translateX(-50%);cursor:ns-resize}
+.rh.bm{bottom:-5px;left:50%;transform:translateX(-50%);cursor:ns-resize}
+.rh.ml{top:50%;left:-5px;transform:translateY(-50%);cursor:ew-resize}
+.rh.mr{top:50%;right:-5px;transform:translateY(-50%);cursor:ew-resize}
+
+.el-del {
+  display:none;
+  position:absolute;top:-11px;right:-11px;
+  width:20px;height:20px;border-radius:50%;
+  background:var(--danger);color:#fff;font-size:.7rem;
+  align-items:center;justify-content:center;
+  z-index:20;cursor:pointer;border:2px solid #0b0c10;
+}
+.el-wrap.selected .el-del { display:flex; }
+
+/* font preview in select */
+#prop-font option { font-size: .85rem; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="{{ url_for('static', filename='js/editor.js') }}"></script>
+<script>
+// Highlight active alignment button
+function setAlignActive(btn) {
+  btn.closest('.fmt-btn-row').querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('fmt-btn-active'));
+  btn.classList.add('fmt-btn-active');
+}
+
+// Apply font family to select and preview
+(function loadFontsInSelect() {
+  const sel = document.getElementById('prop-font');
+  if (!sel) return;
+  // Nothing extra needed — Google Fonts link handles loading
+})();
+
+// Patch selectEl to also set alignment btn active state
+const _origSelectEl = window.selectEl;
+document.addEventListener('DOMContentLoaded', function() {
+  // patch via MutationObserver to wait for editor.js init
+});
+
+// After editor initialises, patch updateSelectedProp to sync font select
+const _patchReady = setInterval(() => {
+  if (!document.getElementById('prop-font')) return;
+  clearInterval(_patchReady);
+
+  // Sync font select value whenever an element is selected
+  const origUpdate = window.updateSelectedProp;
+  if (origUpdate) {
+    window.updateSelectedProp = function(prop, value) {
+      origUpdate(prop, value);
+      if (prop === 'font') {
+        const sel = document.getElementById('prop-font');
+        if (sel) sel.value = value;
+        // Live-preview font name in select label
+        if (sel) sel.style.fontFamily = `'${value}', serif`;
+      }
+    };
+  }
+}, 100);
+</script>
+{% endblock %}

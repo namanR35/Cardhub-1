@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>{% block title %}CardHub Community{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/main.css') }}"/>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% if not hide_nav %}
+<nav class="navbar">
+  <a href="/" class="nav-logo">
+    <img src="/static/site_logo.png" style="height:28px;width:auto;object-fit:contain" alt="CardHub" onerror="this.style.display='none'"/>
+    <span>CardHub</span>
+  </a>
+  <div class="nav-search-wrap">
+    <span class="nav-search-icon">🔍</span>
+    <input class="nav-search" id="nav-search" placeholder="Search templates, designers…" autocomplete="off"/>
+    <div class="search-dropdown" id="search-dd"></div>
+  </div>
+  <div class="nav-links">
+    <a href="/" class="nav-link {% if request.endpoint=='home' %}active{% endif %}">Home</a>
+    <a href="/explore" class="nav-link {% if request.endpoint=='explore' %}active{% endif %}">Explore</a>
+    <a href="/community" class="nav-link {% if request.endpoint=='community_page' %}active{% endif %}">Community</a>
+    {% if user %}
+      <a href="/upload" class="nav-link {% if request.endpoint=='upload_page' %}active{% endif %}">Upload</a>
+      {% if user.role in ['uploader','admin'] %}
+      <a href="/dashboard" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}">Dashboard</a>
+      {% endif %}
+      <a href="/my-cards" class="nav-link {% if request.endpoint=='my_cards' %}active{% endif %}">My Cards</a>
+    {% endif %}
+  </div>
+  <div class="nav-actions">
+    {% if user %}
+      {% if not user.is_premium %}<a href="/premium" class="btn btn-premium btn-sm">✦ Premium</a>{% endif %}
+      <a href="/profile/{{ user.username }}" style="position:relative">
+        {% if user.avatar %}<img src="{{ user.avatar }}" class="av" alt="{{ user.username }}"/>
+        {% else %}<div class="av">{{ user.username[0].upper() }}</div>{% endif %}
+      </a>
+      <a href="/settings" class="btn btn-ghost btn-sm">⚙</a>
+      <button class="btn btn-outline btn-sm" id="logout-btn">Sign out</button>
+    {% else %}
+      <a href="/login" class="btn btn-outline btn-sm">Sign in</a>
+      <a href="/register" class="btn btn-gold btn-sm">Join Free</a>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+<div id="toast" class="toast"></div>
+<main class="main">{% block content %}{% endblock %}</main>
+<footer class="footer">
+  <span class="footer-logo">
+    <img src="/static/site_logo.png" style="height:22px;width:auto;display:inline-block;vertical-align:middle;margin-right:5px" onerror="this.style.display='none'"/>
+    CardHub Community
+  </span>
+  <span>Design, share, and inspire together.</span>
+  <div class="flex gap-2">
+    <a href="/explore" style="color:var(--muted)">Explore</a>
+    <a href="/community" style="color:var(--muted)">Community</a>
+    <a href="/premium" style="color:var(--muted)">Premium</a>
+  </div>
+</footer>
+<script>
+window.showToast = function(msg, type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2700);
+};
+const lb=document.getElementById('logout-btn');
+if(lb) lb.addEventListener('click',async()=>{ await fetch('/api/logout',{method:'POST'}); location.href='/'; });
+const ns=document.getElementById('nav-search'), sd=document.getElementById('search-dd');
+let st;
+if(ns){
+  ns.addEventListener('input',()=>{
+    clearTimeout(st); const q=ns.value.trim();
+    if(!q){sd.classList.remove('open');sd.innerHTML='';return;}
+    st=setTimeout(async()=>{
+      const res=await fetch('/api/search?q='+encodeURIComponent(q));
+      const data=await res.json(); sd.innerHTML='';
+      if(!data.length){sd.innerHTML='<div style="padding:11px 14px;color:var(--muted);font-size:.82rem">No results</div>';}
+      data.forEach(item=>{
+        const div=document.createElement('div'); div.className='search-item';
+        if(item.type==='template'){
+          div.innerHTML=`<div class="search-item-thumb" style="background:var(--surface3);border-radius:5px;overflow:hidden;width:36px;height:28px;flex-shrink:0">${item.thumbnail?`<img src="${item.thumbnail}" style="width:100%;height:100%;object-fit:cover"/>`:'🎨'}</div><div><div style="font-weight:600;font-size:.84rem">${item.name}</div><div style="font-size:.71rem;color:var(--muted)">by @${item.uploader||'CardHub'}</div></div>`;
+          div.onclick=()=>location.href='/template/'+item.id;
+        } else {
+          div.innerHTML=`<div style="width:32px;height:32px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0">${item.username[0].toUpperCase()}</div><div><div style="font-weight:600;font-size:.84rem">@${item.username}</div><div style="font-size:.71rem;color:var(--muted)">${item.role==='uploader'?'Designer':'Member'}</div></div>`;
+          div.onclick=()=>location.href='/profile/'+item.username;
+        }
+        sd.appendChild(div);
+      });
+      sd.classList.add('open');
+    },280);
+  });
+  document.addEventListener('click',e=>{if(!ns.contains(e.target)&&!sd.contains(e.target))sd.classList.remove('open');});
+  ns.addEventListener('keydown',e=>{if(e.key==='Enter')location.href='/explore?q='+encodeURIComponent(ns.value);});
+}
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

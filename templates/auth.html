@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% set hide_nav = true %}
+{% block title %}{% if mode=='login' %}Sign In{% else %}Join CardHub{% endif %}{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-glow"></div>
+  <div class="auth-card">
+    <div class="auth-logo">✦ CardHub</div>
+    <div class="auth-sub">{% if mode=='login' %}Welcome back{% else %}Join the design community{% endif %}</div>
+
+    {% if mode=='register' %}
+    <div style="margin-bottom:16px">
+      <div class="form-label" style="margin-bottom:8px">I want to…</div>
+      <div class="role-grid">
+        <div class="role-btn active" id="role-dl" onclick="setRole('downloader')">
+          <span class="role-btn-icon">🎨</span>
+          <span class="role-btn-label">Use Templates</span>
+          <div style="font-size:.67rem;color:var(--muted);margin-top:2px">Edit, download, save</div>
+        </div>
+        <div class="role-btn" id="role-ul" onclick="setRole('uploader')">
+          <span class="role-btn-icon">📤</span>
+          <span class="role-btn-label">Upload Designs</span>
+          <div style="font-size:.67rem;color:var(--muted);margin-top:2px">Share & earn recognition</div>
+        </div>
+      </div>
+      <input type="hidden" id="sel-role" value="downloader"/>
+    </div>
+    {% endif %}
+
+    <div id="auth-error" class="hidden" style="padding:8px 12px;background:rgba(224,80,96,.1);border-radius:var(--r-sm);color:var(--red);font-size:.8rem;margin-bottom:12px"></div>
+
+    {% if mode=='register' %}
+    <div class="form-group"><label class="form-label">Username</label>
+      <input class="form-input" id="f-user" placeholder="your_username" autocomplete="username"/>
+      <div class="form-hint">3-20 chars, letters/numbers/underscore</div>
+    </div>
+    <div class="form-group"><label class="form-label">Email</label>
+      <input type="email" class="form-input" id="f-email" placeholder="you@email.com"/>
+    </div>
+    {% else %}
+    <div class="form-group"><label class="form-label">Username or Email</label>
+      <input class="form-input" id="f-ident" placeholder="username or email" autocomplete="username"/>
+    </div>
+    {% endif %}
+    <div class="form-group"><label class="form-label">Password</label>
+      <div style="position:relative">
+        <input type="password" class="form-input" id="f-pw" placeholder="••••••••"/>
+        <button type="button" onclick="document.getElementById('f-pw').type=document.getElementById('f-pw').type==='password'?'text':'password'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted)">👁</button>
+      </div>
+      {% if mode=='register' %}<div class="form-hint">At least 6 characters</div>{% endif %}
+    </div>
+
+    <button class="btn btn-gold btn-full mt-3" id="auth-btn" onclick="submit()">
+      {% if mode=='login' %}Sign In{% else %}Create Account{% endif %}
+    </button>
+
+    <div style="text-align:center;font-size:.875rem;color:var(--muted);margin-top:16px">
+      {% if mode=='login' %}Don't have an account? <a href="/register" style="color:var(--gold);font-weight:600">Join free →</a>
+      {% else %}Already a member? <a href="/login" style="color:var(--gold);font-weight:600">Sign in →</a>{% endif %}
+    </div>
+    <div style="margin-top:14px;padding:9px;background:var(--surface2);border-radius:var(--r-sm);font-size:.73rem;color:var(--muted);line-height:1.5;text-align:center">
+      <a href="/" style="color:var(--gold)">← Back to CardHub</a>
+    </div>
+  </div>
+</div>
+<script>
+const MODE = '{{ mode }}';
+let role = 'downloader';
+function setRole(r) { role=r; document.getElementById('sel-role').value=r; document.getElementById('role-dl').classList.toggle('active',r==='downloader'); document.getElementById('role-ul').classList.toggle('active',r==='uploader'); }
+function showErr(m) { const e=document.getElementById('auth-error'); e.textContent=m; e.classList.remove('hidden'); }
+async function submit() {
+  const btn=document.getElementById('auth-btn'); btn.disabled=true; btn.textContent='Please wait…';
+  let payload, url;
+  if (MODE==='register') { payload={username:document.getElementById('f-user').value.trim(),email:document.getElementById('f-email').value.trim(),password:document.getElementById('f-pw').value,role}; url='/api/register'; }
+  else { payload={identifier:document.getElementById('f-ident').value.trim(),password:document.getElementById('f-pw').value}; url='/api/login'; }
+  const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const d = await r.json();
+  if (d.error) { showErr(d.error); btn.disabled=false; btn.textContent=MODE==='login'?'Sign In':'Create Account'; return; }
+  const next = new URLSearchParams(location.search).get('next') || (d.role==='uploader'?'/dashboard':'/');
+  location.href = next;
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+</script>
+{% endblock %}

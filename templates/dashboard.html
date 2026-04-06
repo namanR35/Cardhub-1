@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – CardHub{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:32px;padding-bottom:48px">
+  <div class="flex justify-between items-center mb-4" style="flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-size:.73rem;color:var(--gold);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Creator Dashboard</div>
+      <h1 style="font-family:var(--font-d);font-size:2rem;font-weight:700">
+        Welcome, <span class="accent">{{ user.username }}</span>
+        {% if star %}<span title="Top Creator!" style="color:#ffd700">⭐</span>{% endif %}
+      </h1>
+    </div>
+    <a href="/upload" class="btn btn-gold">+ Upload Design</a>
+  </div>
+
+  <!-- STATS -->
+  <div class="stat-grid">
+    {% for v,l,i in [(stats.templates,'Templates','🎨'),(stats.total_likes,'Likes','❤'),(stats.total_views,'Views','👁'),(stats.total_downloads,'Downloads','⬇'),(stats.followers,'Followers','👥')] %}
+    <div class="stat-card"><span style="font-size:1.2rem">{{ i }}</span><span class="stat-val">{{ v }}</span><span class="stat-label">{{ l }}</span></div>
+    {% endfor %}
+  </div>
+
+  <!-- BADGES / PROGRESS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
+    <!-- HD RESOLUTION -->
+    <div style="background:var(--surface);border:1px solid {% if hd_unlocked %}rgba(76,175,130,.3){% else %}var(--border){% endif %};border-radius:var(--r);padding:16px">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">HD Resolution Download</div>
+      {% if hd_unlocked %}
+      <div style="color:var(--green);font-weight:700;font-size:.95rem;margin-bottom:4px">✓ Unlocked!</div>
+      <div style="font-size:.78rem;color:var(--muted)">You can download in high resolution.</div>
+      {% else %}
+      <div style="font-weight:700;color:var(--gold);margin-bottom:5px">{{ 3 - stats.templates }} more upload{{ 's' if (3-stats.templates)!=1 }} needed</div>
+      <div style="background:var(--surface2);border-radius:100px;height:6px;margin-bottom:6px;overflow:hidden">
+        <div style="height:100%;background:var(--gold);border-radius:100px;width:{{ (stats.templates/3*100)|int }}%"></div>
+      </div>
+      <div style="font-size:.75rem;color:var(--muted)">Upload 3+ templates to unlock HD downloads. <a href="/premium" style="color:var(--purple)">Or go Premium.</a></div>
+      {% endif %}
+    </div>
+    <!-- STAR PROGRESS -->
+    <div style="background:var(--surface);border:1px solid {% if star %}rgba(255,215,0,.3){% else %}var(--border){% endif %};border-radius:var(--r);padding:16px">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">⭐ Creator Star</div>
+      {% if star %}
+      <div style="color:#ffd700;font-weight:700;font-size:.95rem;margin-bottom:4px">⭐ You've earned your star!</div>
+      <div style="font-size:.78rem;color:var(--muted)">Displayed next to your name everywhere.</div>
+      {% else %}
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px">Reach <strong style="color:var(--gold)">100 followers</strong> or upload <strong style="color:var(--gold)">50+ templates</strong></div>
+      <div style="font-size:.75rem;color:var(--muted)">Progress: {{ stats.followers }}/100 followers · {{ stats.templates }}/50 uploads</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- PROFILE QUICK EDIT -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:24px">
+    <div class="flex justify-between items-center mb-3"><div style="font-weight:600">Your Profile</div><a href="/profile/{{ user.username }}" class="btn btn-ghost btn-sm">View →</a></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label class="form-label">Bio</label><input class="form-input" id="d-bio" value="{{ user.bio or '' }}" placeholder="About you"/></div>
+      <div class="form-group"><label class="form-label">Watermark Text</label><input class="form-input" id="d-wm" value="{{ user.watermark_text or '@'+user.username }}"/></div>
+      <div class="form-group"><label class="form-label">Website</label><input class="form-input" id="d-web" value="{{ user.website or '' }}" placeholder="https://"/></div>
+      <div class="form-group"><label class="form-label">Public Contact</label><input type="email" class="form-input" id="d-contact" value="{{ user.contact or '' }}"/></div>
+    </div>
+    <div class="flex gap-2 items-center mt-2">
+      <button class="btn btn-gold btn-sm" onclick="saveProf()">Save Profile</button>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.8rem;color:var(--muted)">Upload Avatar: <input type="file" accept="image/*" onchange="upAv(this)" style="font-size:.74rem"/></label>
+    </div>
+  </div>
+
+  <!-- TEMPLATES TABLE -->
+  {% if my_t %}
+  <div style="font-family:var(--font-d);font-size:1.3rem;font-weight:700;margin-bottom:14px">Your Templates</div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
+        {% for h in ['Template','Category','Likes','Views','Downloads','Actions'] %}
+        <th style="padding:9px 13px;text-align:left;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">{{ h }}</th>
+        {% endfor %}
+      </tr></thead>
+      <tbody>
+        {% for t in my_t %}
+        <tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+          <td style="padding:9px 13px">
+            <div class="flex gap-2 items-center">
+              {% if t.get('thumbnail') %}<img src="{{ t.thumbnail }}" style="width:36px;height:26px;border-radius:4px;object-fit:cover;flex-shrink:0"/>
+              {% else %}<div style="width:36px;height:26px;border-radius:4px;background:{{ t.bg }};flex-shrink:0"></div>{% endif %}
+              <div><div style="font-weight:600;font-size:.875rem">{{ t.get('title',t.get('name','')) }}</div>{% if t.get('is_premium') %}<span class="tag tag-purple" style="font-size:.6rem">Premium</span>{% endif %}</div>
+            </div>
+          </td>
+          <td style="padding:9px 13px"><span class="cat-tag">{{ t.get('category','') }}</span></td>
+          <td style="padding:9px 13px;color:var(--red)">❤ {{ likes.get(t.id,[])|length }}</td>
+          <td style="padding:9px 13px;color:var(--muted)">👁 {{ views.get(t.id,0) }}</td>
+          <td style="padding:9px 13px;color:var(--muted)">⬇ {{ t.get('downloads',0) }}</td>
+          <td style="padding:9px 13px"><div class="flex gap-2"><a href="/template/{{ t.id }}" class="btn btn-ghost btn-xs">View</a><button onclick="delT('{{ t.id }}')" class="btn btn-danger btn-xs">Delete</button></div></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><span class="empty-icon">🎨</span><h3>No templates yet</h3><p>Upload your first design.</p><a href="/upload" class="btn btn-gold mt-3">Upload Now</a></div>
+  {% endif %}
+</div>
+<script>
+async function saveProf(){const p={bio:document.getElementById('d-bio').value,website:document.getElementById('d-web').value,contact:document.getElementById('d-contact').value,watermark_text:document.getElementById('d-wm').value};const r=await fetch('/api/update-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();if(d.success)showToast('Saved ✓','success');}
+async function upAv(inp){const fd=new FormData();fd.append('avatar',inp.files[0]);const r=await fetch('/api/upload-avatar',{method:'POST',body:fd});const d=await r.json();if(d.success){showToast('Avatar updated','success');setTimeout(()=>location.reload(),800);}}
+async function delT(tid){if(!confirm('Delete permanently?'))return;const r=await fetch('/api/delete-template/'+tid,{method:'DELETE'});const d=await r.json();if(d.success){showToast('Deleted','success');setTimeout(()=>location.reload(),700);}else showToast(d.error||'Error','error');}
+</script>
+{% endblock %}

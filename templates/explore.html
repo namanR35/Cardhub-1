@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Explore – CardHub Community{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:34px;padding-bottom:48px">
+  <h1 style="font-family:var(--font-d);font-size:2rem;font-weight:700;margin-bottom:6px">
+    {% if q %}Results for "<span class="accent">{{ q }}</span>"{% else %}Explore Templates{% endif %}
+  </h1>
+  <p style="color:var(--muted);margin-bottom:22px">{{ templates|length }} template{{ 's' if templates|length!=1 }}</p>
+  <form method="get" action="/explore" style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+    <input type="hidden" name="cat" value="{{ cat }}"/>
+    <input type="hidden" name="sort" value="{{ sort }}"/>
+    <input type="text" name="q" value="{{ q }}" placeholder="Search…" class="form-input" style="max-width:320px;border-radius:100px;padding-left:14px"/>
+    <button type="submit" class="btn btn-gold btn-sm">Search</button>
+    {% if q %}<a href="/explore" class="btn btn-outline btn-sm">Clear</a>{% endif %}
+  </form>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;align-items:center">
+    {% for c in cats %}
+    <a href="/explore?cat={{ c }}&sort={{ sort }}{% if q %}&q={{ q }}{% endif %}" class="btn {% if cat==c %}btn-gold{% else %}btn-ghost{% endif %} btn-xs">{{ c }}</a>
+    {% endfor %}
+    <div style="margin-left:auto;display:flex;gap:5px">
+      {% for s,l in [('newest','Newest'),('popular','Popular'),('trending','Trending')] %}
+      <a href="/explore?cat={{ cat }}&sort={{ s }}{% if q %}&q={{ q }}{% endif %}" class="btn {% if sort==s %}btn-gold{% else %}btn-outline{% endif %} btn-xs">{{ l }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% if templates %}
+  <div class="cards-grid cards-grid-lg">
+    {% for t in templates %}
+    {% set lc = likes.get(t.id,[])|length %}{% set vc = views.get(t.id,0) %}
+    {% set uname = users.get(t.get('uploader_id',''),{}).get('username','CardHub') %}
+    {% include 'partials/card.html' %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty"><span class="empty-icon">🔍</span><h3>No templates found</h3><p>Try different keywords</p><a href="/explore" class="btn btn-gold mt-3">Browse all</a></div>
+  {% endif %}
+</div>
+{% endblock %}

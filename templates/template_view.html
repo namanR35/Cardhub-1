@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}{{ t.get('title',t.get('name','Template')) }} – CardHub{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:28px;display:grid;grid-template-columns:1fr 290px;gap:22px">
+
+  <!-- LEFT -->
+  <div>
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <a href="/explore" style="color:var(--muted);font-size:.85rem">← Explore</a>
+      <span style="color:var(--faint)">·</span>
+      <h1 style="font-family:var(--font-d);font-size:1.5rem;font-weight:700;flex:1">{{ t.get('title',t.get('name','')) }}</h1>
+      <span class="cat-tag">{{ t.get('category','General') }}</span>
+      {% if t.get('is_premium') %}<span class="tag tag-purple">Premium</span>{% endif %}
+    </div>
+
+    <!-- CANVAS -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:14px">
+      <div style="position:relative;width:100%;aspect-ratio:16/10;overflow:hidden" id="tmpl-canvas">
+        <!-- Background -->
+        <div style="position:absolute;inset:0;background:{{ t.bg }};background-size:cover;background-position:center">
+          {% if t.get('thumbnail') %}
+          <img src="{{ t.thumbnail }}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0"/>
+          {% endif %}
+        </div>
+
+        <!-- Text elements - EDITABLE by logged-in users -->
+        <div style="position:absolute;inset:0;z-index:2">
+          {% if t.get('elements') %}
+            {% for el in t.elements %}
+            {% if el.type == 'text' %}
+            <div contenteditable="{% if user %}true{% else %}false{% endif %}"
+                 data-id="{{ loop.index }}"
+                 style="position:absolute;left:{{ el.x }}px;top:{{ el.y }}px;
+                        font-size:{{ el.size }}px;font-weight:{{ el.weight }};
+                        color:{{ el.color }};font-family:'{{ el.font }}',serif;
+                        text-align:{{ el.align }};width:{{ el.w }}px;
+                        padding:3px 6px;border-radius:4px;outline:none;
+                        word-break:break-word;white-space:pre-wrap;line-height:1.3;
+                        {% if user %}cursor:text;{% else %}pointer-events:none;{% endif %}"
+                 class="tmpl-text-el">{{ el.content }}</div>
+            {% endif %}
+            {% endfor %}
+          {% else %}
+            <!-- Fallback for built-in templates without elements array -->
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px">
+              <span style="font-size:2.5rem">{{ t.get('emoji','🎨') }}</span>
+              <h2 contenteditable="{% if user %}true{% else %}false{% endif %}" style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:{{ t.text_color or '#fff' }};text-shadow:0 2px 12px rgba(0,0,0,.25);cursor:{% if user %}text{% else %}default{% endif %}">{{ t.get('default_title',t.get('title','')) }}</h2>
+              <p contenteditable="{% if user %}true{% else %}false{% endif %}" style="font-size:1rem;color:{{ t.text_color or '#fff' }};opacity:.85;text-shadow:0 1px 6px rgba(0,0,0,.25);cursor:{% if user %}text{% else %}default{% endif %}">{{ t.get('default_subtitle',t.get('subtitle','')) }}</p>
+              <p contenteditable="{% if user %}true{% else %}false{% endif %}" style="font-size:.78rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:{{ t.text_color or '#fff' }};opacity:.65;text-shadow:0 1px 6px rgba(0,0,0,.25);cursor:{% if user %}text{% else %}default{% endif %}">{{ t.get('default_details',t.get('details','')) }}</p>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- WATERMARK — always present -->
+        <div class="wm-layer" id="wm-layer">
+          <span class="wm-site">✦ CardHub</span>
+          {% if t.get('watermark_text') and not is_subscribed %}
+          <span class="wm-user">{{ t.watermark_text }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Login overlay if not signed in -->
+        {% if not user %}
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10;border-radius:inherit">
+          <div style="text-align:center;padding:24px">
+            <div style="font-size:1.8rem;margin-bottom:10px">🔒</div>
+            <div style="font-family:var(--font-d);font-size:1.3rem;margin-bottom:8px">Sign in to edit</div>
+            <div style="color:var(--muted);font-size:.875rem;margin-bottom:16px">Free account lets you personalise any template</div>
+            <div class="flex gap-2" style="justify-content:center">
+              <a href="/login" class="btn btn-outline btn-sm">Sign in</a>
+              <a href="/register" class="btn btn-gold btn-sm">Join Free</a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Action bar -->
+      <div style="padding:13px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        {% if user %}
+        <button class="like-btn {% if is_liked %}liked{% endif %}" id="like-btn" onclick="toggleLike()">
+          <span id="like-icon">{% if is_liked %}❤{% else %}🤍{% endif %}</span>
+          <span id="like-cnt">{{ like_count }}</span>
+        </button>
+        <button class="save-btn {% if is_saved %}saved{% endif %}" id="save-btn" onclick="toggleSave()">
+          <span id="save-icon">{% if is_saved %}🔖{% else %}📌{% endif %}</span>
+          <span id="save-lbl">{% if is_saved %}Saved{% else %}Save{% endif %}</span>
+        </button>
+        {% endif %}
+        <div style="margin-left:auto;font-size:.78rem;color:var(--muted)">👁 {{ view_count }} · ⬇ {{ t.get('downloads',0) }}</div>
+        {% if user %}
+        <a href="/editor/{{ t.id }}" class="btn btn-outline btn-sm">✏️ Full Editor</a>
+        <button class="btn btn-gold btn-sm" onclick="downloadCard()">
+          {% if t.get('is_premium') and not is_subscribed %}💎 Premium{% else %}⬇ Download{% endif %}
+        </button>
+        {% else %}
+        <a href="/register" class="btn btn-gold btn-sm">Sign in to Download</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RATING -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px">
+      <div class="flex justify-between items-center mb-2">
+        <span style="font-weight:600;font-size:.9rem">Rating</span>
+        <span style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;color:var(--gold)">{{ avg_rating or '—' }}/5</span>
+      </div>
+      {% if user %}
+      <div class="stars" id="stars">
+        {% for i in range(1,6) %}
+        <span class="star {% if i <= user_rating %}filled{% endif %}" data-v="{{ i }}" onclick="rate({{ i }})">★</span>
+        {% endfor %}
+      </div>
+      {% else %}<div style="font-size:.82rem;color:var(--muted)"><a href="/login" style="color:var(--gold)">Sign in</a> to rate</div>{% endif %}
+    </div>
+
+    <!-- COMMENTS -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px">
+      <div style="font-weight:600;font-size:.9rem;margin-bottom:12px">Comments ({{ comments|length }})</div>
+      {% if user %}
+      <div class="flex gap-2 mb-3">
+        <div class="av" style="margin-top:2px;flex-shrink:0">{{ user.username[0].upper() }}</div>
+        <div style="flex:1">
+          <textarea id="cmt-input" class="form-input" rows="2" placeholder="Add a comment…" style="resize:vertical;border-radius:var(--r-sm)"></textarea>
+          <button class="btn btn-gold btn-sm mt-2" onclick="postComment()">Post</button>
+        </div>
+      </div>
+      {% endif %}
+      <div class="comment-list" id="cmt-list">
+        {% for c in comments %}
+        <div class="comment-item" id="cmt-{{ c.id }}">
+          <div class="comment-av">{{ c._user.username[0].upper() }}</div>
+          <div class="comment-body">
+            <div class="comment-user">@{{ c._user.username }}</div>
+            <div class="comment-text">{{ c.text }}</div>
+            <div class="comment-time">{{ c.created_at }}</div>
+          </div>
+          {% if user and (user.id == c.user_id or user.id == t.get('uploader_id','')) %}
+          <button onclick="delComment('{{ c.id }}')" style="color:var(--red);font-size:.78rem;padding:2px 5px;background:none;border:none;cursor:pointer;flex-shrink:0">✕</button>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% if not comments %}<div style="text-align:center;padding:16px;color:var(--muted);font-size:.82rem">No comments yet. Be first!</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <div>
+    <!-- Uploader -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:13px">
+      <div class="form-label mb-2">Designer</div>
+      {% if uploader and uploader.get('username') %}
+      <a href="/profile/{{ uploader.username }}" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        {% if uploader.avatar %}<img src="{{ uploader.avatar }}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0"/>
+        {% else %}<div style="width:42px;height:42px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:1.1rem;color:var(--gold);flex-shrink:0">{{ uploader.username[0].upper() }}</div>{% endif %}
+        <div>
+          <div style="font-weight:600;font-size:.9rem">{{ uploader.username }}</div>
+          <div style="font-size:.72rem;color:var(--muted)">@{{ uploader.username }}</div>
+        </div>
+      </a>
+      {% if uploader.get('bio') %}<p style="font-size:.8rem;color:var(--muted);line-height:1.55;margin-bottom:10px">{{ uploader.bio }}</p>{% endif %}
+      {% if uploader.get('contact') %}<div style="font-size:.74rem;color:var(--muted)">📧 {{ uploader.contact }}</div>{% endif %}
+      {% if uploader.get('website') %}<a href="{{ uploader.website }}" target="_blank" style="font-size:.74rem;color:var(--gold);display:block;margin-top:4px">🔗 {{ uploader.website }}</a>{% endif %}
+      <a href="/profile/{{ uploader.username }}" class="btn btn-outline btn-sm w-full mt-3">View Profile</a>
+      {% else %}
+      <div style="font-size:.82rem;color:var(--muted)">CardHub Built-in Template</div>
+      {% endif %}
+    </div>
+
+    <!-- Details -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:13px">
+      <div class="form-label mb-2">Template Info</div>
+      {% if t.get('description') %}<p style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:10px">{{ t.description }}</p>{% endif %}
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:.82rem">
+        <div class="flex justify-between"><span style="color:var(--muted)">Category</span><span class="cat-tag">{{ t.get('category') }}</span></div>
+        <div class="flex justify-between"><span style="color:var(--muted)">Edit text</span><span style="color:var(--green)">✓ Allowed</span></div>
+        <div class="flex justify-between"><span style="color:var(--muted)">Watermark</span>
+          {% if is_subscribed %}<span style="color:var(--green)">Removed (Premium)</span>
+          {% else %}<span style="color:var(--muted)">Present</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if not is_subscribed %}
+    <div style="background:var(--purple-bg);border:1px solid rgba(192,132,252,.2);border-radius:var(--r);padding:16px;margin-bottom:13px">
+      <div style="font-weight:600;color:var(--purple);margin-bottom:6px;font-size:.875rem">💎 Remove Watermark</div>
+      <p style="font-size:.78rem;color:var(--muted);line-height:1.5;margin-bottom:10px">Go Premium for watermark-free hi-res downloads.</p>
+      <a href="/premium" class="btn btn-premium btn-sm w-full">Go Premium</a>
+    </div>
+    {% endif %}
+
+    <!-- Related -->
+    {% if related %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px">
+      <div class="form-label mb-2">More Like This</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        {% for r in related %}
+        <a href="/template/{{ r.id }}" style="display:flex;align-items:center;gap:8px;padding:5px;border-radius:var(--r-sm);transition:background .15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+          {% if r.get('thumbnail') %}<img src="{{ r.thumbnail }}" style="width:38px;height:28px;border-radius:4px;object-fit:cover;flex-shrink:0"/>
+          {% else %}<div style="width:38px;height:28px;border-radius:4px;background:{{ r.bg }};flex-shrink:0"></div>{% endif %}
+          <span style="font-size:.8rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.get('title',r.get('name','')) }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+const TID = '{{ t.id }}';
+const IS_PREMIUM = {{ 'true' if t.get('is_premium') else 'false' }};
+const IS_SUBSCRIBED = {{ 'true' if is_subscribed else 'false' }};
+
+async function toggleLike() {
+  const r = await fetch('/api/like/'+TID,{method:'POST'});
+  if(r.redirected||r.status===302){location.href='/login';return;}
+  const d = await r.json();
+  if(d.success){document.getElementById('like-cnt').textContent=d.count;document.getElementById('like-icon').textContent=d.liked?'❤':'🤍';document.getElementById('like-btn').classList.toggle('liked',d.liked);}
+}
+async function toggleSave() {
+  const r = await fetch('/api/save/'+TID,{method:'POST'});
+  const d = await r.json();
+  if(d.success){document.getElementById('save-icon').textContent=d.saved?'🔖':'📌';document.getElementById('save-lbl').textContent=d.saved?'Saved':'Save';document.getElementById('save-btn').classList.toggle('saved',d.saved);showToast(d.saved?'Saved ✓':'Removed','success');}
+}
+async function rate(stars) {
+  const r = await fetch('/api/rate/'+TID,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stars})});
+  const d = await r.json();
+  if(d.success){document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('filled',i<stars));showToast(`Rated ${stars} ★`,'success');}
+}
+document.querySelectorAll('.star').forEach(s=>{
+  const v=parseInt(s.dataset.v);
+  const cur=parseInt('{{ user_rating }}')||0;
+  s.addEventListener('mouseover',()=>document.querySelectorAll('.star').forEach((st,i)=>st.classList.toggle('filled',i<v)));
+  s.addEventListener('mouseout',()=>document.querySelectorAll('.star').forEach((st,i)=>st.classList.toggle('filled',i<cur)));
+});
+async function postComment() {
+  const text = document.getElementById('cmt-input').value.trim();
+  if(!text)return;
+  const r = await fetch('/api/comment/'+TID,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+  const d = await r.json();
+  if(d.success){
+    const c=d.comment;
+    const list=document.getElementById('cmt-list');
+    const empty=list.querySelector('[style*="text-align:center"]');if(empty)empty.remove();
+    const item=document.createElement('div');item.className='comment-item';item.id='cmt-'+c.id;
+    item.innerHTML=`<div class="comment-av">${c._user.username[0].toUpperCase()}</div><div class="comment-body"><div class="comment-user">@${c._user.username}</div><div class="comment-text">${c.text}</div><div class="comment-time">${c.created_at}</div></div><button onclick="delComment('${c.id}')" style="color:var(--red);font-size:.78rem;padding:2px 5px;background:none;border:none;cursor:pointer;flex-shrink:0">✕</button>`;
+    list.appendChild(item);document.getElementById('cmt-input').value='';showToast('Comment posted ✓','success');
+  }
+}
+async function delComment(cid) {
+  if(!confirm('Delete this comment?'))return;
+  const r=await fetch('/api/delete-comment/'+TID+'/'+cid,{method:'DELETE'});
+  const d=await r.json();
+  if(d.success){document.getElementById('cmt-'+cid)?.remove();showToast('Deleted');}
+}
+async function downloadCard() {
+  if(IS_PREMIUM&&!IS_SUBSCRIBED){showToast('Premium required','error');setTimeout(()=>location.href='/premium',1200);return;}
+  const r=await fetch('/api/download/'+TID,{method:'POST'});
+  const d=await r.json();
+  if(!d.success){showToast(d.error||'Error','error');return;}
+  const wm=document.getElementById('wm-layer');
+  if(d.remove_watermark&&wm)wm.style.display='none';
+  if(!window.html2canvas){showToast('Export unavailable','error');return;}
+  html2canvas(document.getElementById('tmpl-canvas'),{scale:2,useCORS:true,backgroundColor:null}).then(canvas=>{
+    if(wm)wm.style.display='';
+    canvas.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='card.png';a.click();showToast('Downloaded ✓','success');});
+  }).catch(()=>{if(wm)wm.style.display='';showToast('Download failed','error');});
+}
+</script>
+{% endblock %}

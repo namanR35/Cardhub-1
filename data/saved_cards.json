@@ -1,0 +1,83 @@
+[
+  {
+    "template_id": "birthday-gold",
+    "title": "GWEN WEDS TONY\u2715",
+    "subtitle": "\u2715",
+    "details": "The night is young and so are we. Come party with us \u2014 it's going to be absolutely unforgettable!",
+    "emoji": "",
+    "bg": "linear-gradient(135deg,#b8860b 0%,#ffd700 50%,#b8860b 100%)",
+    "text_color": "#1a1400",
+    "bg_image": "/static/uploads/backgrounds/d64e8bc2-dd13-40a3-a779-f3d02fca51a6.jpg",
+    "elements": [
+      {
+        "id": "el_1",
+        "type": "text",
+        "x": 60,
+        "y": 24.5,
+        "w": 480,
+        "h": "auto",
+        "opacity": 1,
+        "zIndex": 3,
+        "content": "GWEN WEDS TONY\u2715",
+        "size": 42,
+        "weight": 700,
+        "color": "#1a1400",
+        "font": "Playfair Display",
+        "align": "center"
+      },
+      {
+        "id": "el_3",
+        "type": "image",
+        "x": 307,
+        "y": 66.30000000000001,
+        "w": 235,
+        "h": 241,
+        "opacity": 1,
+        "zIndex": 4,
+        "src": "/static/uploads/backgrounds/0e5b1abb-5601-45a1-a611-37a25010356d.png",
+        "originalSrc": "/static/uploads/backgrounds/0e5b1abb-5601-45a1-a611-37a25010356d.png",
+        "radius": 0,
+        "fit": "contain"
+      },
+      {
+        "id": "el_4",
+        "type": "text",
+        "x": 60,
+        "y": 120.05,
+        "w": 480,
+        "h": "auto",
+        "opacity": 1,
+        "zIndex": 5,
+        "content": "\u2715",
+        "size": 15,
+        "weight": 400,
+        "color": "#ffffff",
+        "font": "Playfair Display",
+        "align": "center"
+      },
+      {
+        "id": "el_5",
+        "type": "text",
+        "x": 60,
+        "y": 120.05,
+        "w": 480,
+        "h": "auto",
+        "opacity": 0.83,
+        "zIndex": 6,
+        "content": "The night is young and so are we. Come party with us \u2014 it's going to be absolutely unforgettable!",
+        "size": 13,
+        "weight": "900",
+        "color": "#ffffff",
+        "font": "Spectral",
+        "align": "left"
+      }
+    ],
+    "rsvp_enabled": false,
+    "font_size_title": 42,
+    "font_size_subtitle": 15,
+    "font_size_details": 13,
+    "id": "2c61f3e2-4477-4cf6-b42b-ccae8af48df3",
+    "user_id": "2233d8d0-c8f6-40a4-9936-823809123833",
+    "saved_at": "Apr 06, 2026"
+  }
+]

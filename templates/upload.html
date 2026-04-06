@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Upload Design – CardHub{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:32px;padding-bottom:56px;max-width:820px">
+  <div style="margin-bottom:28px">
+    <div style="font-size:.73rem;color:var(--gold);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Creator Studio</div>
+    <h1 style="font-family:var(--font-d);font-size:2rem;font-weight:700;margin-bottom:6px">Upload Your Design</h1>
+    <p style="color:var(--muted)">Share your template with the CardHub community. Downloaders can only edit text — background and watermark stay intact.</p>
+  </div>
+  <div id="up-err" class="hidden" style="padding:9px 13px;background:rgba(224,80,96,.1);border-radius:var(--r-sm);color:var(--red);font-size:.8rem;margin-bottom:14px"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+    <!-- META -->
+    <div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:14px">
+        <div class="tool-label mb-3">Template Info</div>
+        <div class="form-group"><label class="form-label">Name *</label><input class="form-input" id="t-name" placeholder="e.g. Rose Wedding Invitation"/></div>
+        <div class="form-group"><label class="form-label">Category</label>
+          <select class="form-input" id="t-cat" style="-webkit-appearance:none">
+            {% for c in ['Birthday','Wedding','Anniversary','Party','Graduation','Baby Shower','Festival','Holiday','Business','Other'] %}
+            <option>{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="t-desc" rows="3" placeholder="Describe your template…"></textarea></div>
+        <div class="form-group"><label class="form-label">Your Watermark</label>
+          <input class="form-input" id="t-wm" value="@{{ user.username }}" placeholder="@yourname"/>
+          <div class="form-hint">Appears on all downloads (removable with Premium)</div>
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="t-premium" style="width:14px;height:14px;accent-color:var(--purple)"/>
+            <span class="form-label" style="margin:0">Premium-only template</span>
+          </label>
+        </div>
+      </div>
+      <!-- Thumbnail -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px">
+        <div class="tool-label mb-2">Thumbnail</div>
+        <div class="upload-zone" id="thumb-zone" style="aspect-ratio:4/3">
+          <div style="font-size:1.6rem;margin-bottom:5px;pointer-events:none">🖼</div>
+          <div class="upload-zone-text">Click to upload thumbnail<br><span style="font-size:.68rem;opacity:.6">JPG, PNG</span></div>
+          <input type="file" id="thumb-file" accept="image/*" onchange="prevThumb(this)"/>
+        </div>
+        <img id="thumb-prev" style="display:none;width:100%;border-radius:var(--r-sm);margin-top:8px;aspect-ratio:4/3;object-fit:cover"/>
+      </div>
+    </div>
+
+    <!-- CANVAS DESIGNER -->
+    <div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:14px">
+        <div class="tool-label mb-2">Background Colour</div>
+        <div class="form-row-2 mb-2">
+          <div><div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">From</div><input type="color" class="form-input" id="bg1" value="#1a1a2e" oninput="updBg()"/></div>
+          <div><div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">To</div><input type="color" class="form-input" id="bg2" value="#4a0080" oninput="updBg()"/></div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">
+          {% for p in [('#b8860b','#ffd700'),('#c9748b','#f5c6d0'),('#1a0533','#4a0080'),('#0d1b4b','#1a3080'),('#8b1a2e','#c0392b'),('#ff6b35','#f7c59f'),('#1b4332','#2d6a4f'),('#023e8a','#00b4d8')] %}
+          <div style="width:20px;height:20px;border-radius:3px;cursor:pointer;background:linear-gradient(135deg,{{ p[0] }},{{ p[1] }})" onclick="setPal('{{ p[0] }}','{{ p[1] }}')"></div>
+          {% endfor %}
+        </div>
+
+        <div id="cv" style="width:100%;aspect-ratio:16/10;border-radius:var(--r-sm);position:relative;overflow:hidden;background:linear-gradient(135deg,#1a1a2e,#4a0080);cursor:crosshair" onclick="addTxt(event)">
+          <div id="cv-els" style="position:absolute;inset:0"></div>
+          <div id="cv-hint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:.73rem;color:rgba(255,255,255,.3);text-align:center">Click to add text element</div>
+          <div style="position:absolute;bottom:7px;right:9px;font-size:.55rem;color:rgba(255,255,255,.38);font-weight:700;pointer-events:none;letter-spacing:.07em">✦ CardHub</div>
+        </div>
+        <div style="font-size:.7rem;color:var(--muted);text-align:center;margin-top:5px">Click canvas → add text · Drag to move</div>
+      </div>
+
+      <!-- Element controls -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px">
+        <div class="tool-label mb-2">Selected Element</div>
+        <div id="no-sel" style="font-size:.8rem;color:var(--muted)">Click canvas to add or select an element</div>
+        <div id="el-props" class="hidden">
+          <div class="form-group"><label class="form-label">Text</label><input class="form-input" id="ep-txt" oninput="updEl('txt',this.value)"/></div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Size</label>
+              <div style="display:flex;gap:4px;align-items:center">
+                <button class="btn btn-ghost btn-xs" onclick="updEl('sz',-2)">−</button>
+                <span id="ep-sz" style="font-size:.85rem;font-weight:700;color:var(--gold);min-width:24px;text-align:center">22</span>
+                <button class="btn btn-ghost btn-xs" onclick="updEl('sz',2)">+</button>
+              </div>
+            </div>
+            <div class="form-group"><label class="form-label">Colour</label><input type="color" class="form-input" id="ep-col" value="#ffffff" oninput="updEl('col',this.value)" style="height:32px"/></div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-xs" onclick="updEl('w','400')">Normal</button>
+            <button class="btn btn-ghost btn-xs" onclick="updEl('w','700')">Bold</button>
+            <button class="btn btn-danger btn-xs" onclick="delSelEl()">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:22px;display:flex;gap:10px;justify-content:flex-end">
+    <a href="/dashboard" class="btn btn-outline">Cancel</a>
+    <button class="btn btn-gold" id="pub-btn" onclick="publish()">🚀 Publish Template</button>
+  </div>
+</div>
+
+<script>
+let els=[], selId=null, ctr=0, curBg='linear-gradient(135deg,#1a1a2e,#4a0080)';
+function updBg(){const c1=document.getElementById('bg1').value,c2=document.getElementById('bg2').value;curBg=`linear-gradient(135deg,${c1},${c2},${c1})`;document.getElementById('cv').style.background=curBg;}
+function setPal(c1,c2){document.getElementById('bg1').value=c1;document.getElementById('bg2').value=c2;updBg();}
+function prevThumb(inp){const r=new FileReader();r.onload=e=>{const img=document.getElementById('thumb-prev');img.src=e.target.result;img.style.display='block';document.getElementById('thumb-zone').style.display='none';};r.readAsDataURL(inp.files[0]);}
+function addTxt(e){
+  const cv=document.getElementById('cv'),rect=cv.getBoundingClientRect();
+  const x=((e.clientX-rect.left)/rect.width)*100, y=((e.clientY-rect.top)/rect.height)*100;
+  const id='el_'+(++ctr);
+  const el={id,txt:'New Text',x:Math.max(3,x-20),y:Math.max(3,y-4),sz:22,w:700,col:'#ffffff',font:'Playfair Display',align:'center',wpct:45};
+  els.push(el);renderEl(el);selEl(id);document.getElementById('cv-hint').style.display='none';
+}
+function renderEl(el){
+  const ex=document.getElementById('wrap_'+el.id);if(ex)ex.remove();
+  const cv=document.getElementById('cv'),pw=cv.offsetWidth,ph=cv.offsetHeight;
+  const wrap=document.createElement('div');wrap.id='wrap_'+el.id;
+  wrap.style.cssText=`position:absolute;left:${el.x}%;top:${el.y}%;cursor:move;max-width:90%`;
+  const inner=document.createElement('div');
+  inner.style.cssText=`font-size:${el.sz}px;font-weight:${el.w};color:${el.col};font-family:'${el.font}',serif;text-align:${el.align};white-space:nowrap;padding:2px 4px;border-radius:3px;outline:2px solid transparent;transition:outline .15s`;
+  inner.textContent=el.txt;wrap.appendChild(inner);
+  wrap.addEventListener('click',ev=>{ev.stopPropagation();selEl(el.id);});
+  mkDrag(wrap,el);document.getElementById('cv-els').appendChild(wrap);
+}
+function mkDrag(wrap,el){
+  let drag=false,ox,oy,sx,sy;
+  const cv=document.getElementById('cv');
+  wrap.addEventListener('mousedown',e=>{drag=true;sx=e.clientX;sy=e.clientY;ox=el.x;oy=el.y;e.preventDefault();});
+  document.addEventListener('mousemove',e=>{if(!drag)return;const r=cv.getBoundingClientRect();el.x=Math.max(0,Math.min(90,ox+((e.clientX-sx)/r.width)*100));el.y=Math.max(0,Math.min(90,oy+((e.clientY-sy)/r.height)*100));wrap.style.left=el.x+'%';wrap.style.top=el.y+'%';});
+  document.addEventListener('mouseup',()=>{drag=false;});
+}
+function selEl(id){
+  selId=id;const el=els.find(e=>e.id===id);if(!el)return;
+  document.querySelectorAll('#cv-els>div>div').forEach(d=>d.style.outline='2px solid transparent');
+  const w=document.getElementById('wrap_'+id);if(w)w.querySelector('div').style.outline='2px solid rgba(212,168,67,.7)';
+  document.getElementById('no-sel').style.display='none';document.getElementById('el-props').classList.remove('hidden');
+  document.getElementById('ep-txt').value=el.txt;document.getElementById('ep-sz').textContent=el.sz;document.getElementById('ep-col').value=el.col;
+}
+function updEl(prop,val){
+  const el=els.find(e=>e.id===selId);if(!el)return;
+  if(prop==='sz'){el.sz=Math.max(8,Math.min(80,el.sz+(typeof val==='number'?val:0)));document.getElementById('ep-sz').textContent=el.sz;}
+  else if(prop==='txt'){el.txt=val;}
+  else if(prop==='col'){el.col=val;}
+  else if(prop==='w'){el.w=val;}
+  renderEl(el);selEl(el.id);
+}
+function delSelEl(){els=els.filter(e=>e.id!==selId);document.getElementById('wrap_'+selId)?.remove();selId=null;document.getElementById('no-sel').style.display='';document.getElementById('el-props').classList.add('hidden');if(!els.length)document.getElementById('cv-hint').style.display='';}
+async function publish(){
+  const name=document.getElementById('t-name').value.trim();
+  if(!name){const e=document.getElementById('up-err');e.textContent='Template name required';e.classList.remove('hidden');return;}
+  document.getElementById('up-err').classList.add('hidden');
+  const btn=document.getElementById('pub-btn');btn.disabled=true;btn.textContent='Publishing…';
+  const cv=document.getElementById('cv'),pw=cv.offsetWidth,ph=cv.offsetHeight;
+  const mapped=els.map(el=>({...el,type:'text',x:Math.round(el.x/100*pw),y:Math.round(el.y/100*ph),w:Math.round(el.wpct/100*pw),size:el.sz,weight:el.w,color:el.col,font:el.font,align:el.align,content:el.txt}));
+  const fd=new FormData();
+  fd.append('name',name);fd.append('category',document.getElementById('t-cat').value);
+  fd.append('description',document.getElementById('t-desc').value);fd.append('watermark_text',document.getElementById('t-wm').value);
+  fd.append('is_premium',document.getElementById('t-premium').checked?'true':'false');
+  fd.append('bg',curBg);fd.append('text_color','#ffffff');fd.append('elements',JSON.stringify(mapped));
+  const tf=document.getElementById('thumb-file').files[0];if(tf)fd.append('thumbnail',tf);
+  const r=await fetch('/api/upload-template',{method:'POST',body:fd});
+  const d=await r.json();
+  if(d.success){showToast('Published! 🎉','success');setTimeout(()=>location.href='/template/'+d.id,1200);}
+  else{document.getElementById('up-err').textContent=d.error||'Failed';document.getElementById('up-err').classList.remove('hidden');btn.disabled=false;btn.textContent='🚀 Publish Template';}
+}
+</script>
+{% endblock %}

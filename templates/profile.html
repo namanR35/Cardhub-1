@@ -1,0 +1,619 @@
+{% extends "base.html" %}
+{% block title %}@{{ prof.username }} – CardHub{% endblock %}
+{% block content %}
+
+<div class="profile-banner"><div style="width:100%;height:100%;background:linear-gradient(135deg,#111120,#1a1a2e,#0f0f18)"></div></div>
+<div style="background:var(--surface);border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div class="profile-header-inner">
+      <div class="profile-avatar-wrap">
+        {% if prof.avatar %}<img src="{{ prof.avatar }}" alt="{{ prof.username }}"/>
+        {% else %}<span style="font-family:var(--font-d);font-size:2rem;color:var(--gold)">{{ prof.username[0].upper() }}</span>{% endif %}
+      </div>
+      <div class="profile-info">
+        <div class="profile-name">
+          {{ prof.display_name or prof.username }}
+          {% if star %}<span title="Top Creator" style="color:#ffd700;font-size:1.2rem">⭐</span>{% endif %}
+          {% if prof.is_premium %}<span style="color:var(--purple)">👑</span>{% endif %}
+          {% if prof.role in ['uploader','admin'] %}<span class="tag tag-gold" style="font-size:.62rem">Designer</span>{% endif %}
+        </div>
+        <div class="profile-uname">@{{ prof.username }}</div>
+        <div style="font-size:.72rem;color:var(--gold);margin-top:2px">ID: {{ prof.id[:8].upper() }}</div>
+        {% if can_view_full or privacy == 'public' %}
+          {% if prof.bio %}<div class="profile-bio">{{ prof.bio }}</div>{% endif %}
+          <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+            {% if prof.website %}<a href="{{ prof.website }}" target="_blank" style="font-size:.8rem;color:var(--gold)">🔗 {{ prof.website }}</a>{% endif %}
+            {% if prof.contact %}<span style="font-size:.8rem;color:var(--muted)">📧 {{ prof.contact }}</span>{% endif %}
+            <span style="font-size:.8rem;color:var(--muted)">📅 Joined {{ prof.created_at[:12] }}</span>
+          </div>
+          {% if prof.logo_url %}
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:.72rem;color:var(--muted)">Watermark:</span>
+            <img src="{{ prof.logo_url }}" style="height:22px;width:auto;border-radius:4px"/>
+          </div>
+          {% endif %}
+        {% endif %}
+        <div class="profile-stats">
+          <div><div class="ps-val">{{ user_tmpls|length }}</div><div class="ps-label">Designs</div></div>
+          <div><div class="ps-val">{{ user_posts|length }}</div><div class="ps-label">Posts</div></div>
+          <div><div class="ps-val">{{ total_likes }}</div><div class="ps-label">Likes</div></div>
+          <div><div class="ps-val">{{ follower_count }}</div><div class="ps-label">Followers</div></div>
+          <div><div class="ps-val">{{ following_count }}</div><div class="ps-label">Following</div></div>
+        </div>
+      </div>
+      <div style="margin-top:52px;display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+        {% if user and user.id == prof.id %}
+          <a href="/settings" class="btn btn-outline btn-sm">⚙ Edit Profile</a>
+          <a href="/upload" class="btn btn-gold btn-sm">+ Upload</a>
+          <a href="/dashboard" class="btn btn-ghost btn-sm">Dashboard</a>
+        {% elif user %}
+          {% if is_following_prof %}
+          <button class="btn btn-outline btn-sm" id="follow-main-btn" onclick="toggleFollow('{{ prof.id }}','{{ prof.username }}')">✓ Following</button>
+          {% elif has_request %}
+          <button class="btn btn-ghost btn-sm" disabled>⏳ Request Sent</button>
+          {% elif privacy == 'private' %}
+          <button class="btn btn-gold btn-sm" id="follow-main-btn" onclick="toggleFollow('{{ prof.id }}','{{ prof.username }}')">🔒 Request to Follow</button>
+          {% else %}
+          <button class="btn btn-gold btn-sm" id="follow-main-btn" onclick="toggleFollow('{{ prof.id }}','{{ prof.username }}')">+ Follow</button>
+          {% endif %}
+        {% else %}
+          <a href="/login" class="btn btn-gold btn-sm">Sign in to Follow</a>
+        {% endif %}
+        {% if privacy == 'private' and not can_view_full %}
+        <span class="tag tag-gold" style="font-size:.7rem">🔒 Private Profile</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not can_view_full and privacy == 'private' %}
+<div class="container" style="padding-top:48px;padding-bottom:48px;text-align:center">
+  <div style="font-size:2.5rem;margin-bottom:16px">🔒</div>
+  <h2 style="font-family:var(--font-d);font-size:1.6rem;margin-bottom:10px">This profile is private</h2>
+  <p style="color:var(--muted);margin-bottom:20px">Send a follow request to see @{{ prof.username }}'s designs and posts.</p>
+  {% if user %}
+    {% if has_request %}
+    <div class="tag tag-gold">⏳ Follow request sent — waiting for approval</div>
+    {% else %}
+    <button class="btn btn-gold" onclick="toggleFollow('{{ prof.id }}','{{ prof.username }}')">🔒 Send Follow Request</button>
+    {% endif %}
+  {% else %}
+  <a href="/login" class="btn btn-gold">Sign in to Follow</a>
+  {% endif %}
+</div>
+
+{% else %}
+
+<!-- TABS -->
+<div style="background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:10">
+  <div class="container" style="display:flex;overflow-x:auto">
+    <button class="panel-tab active" id="tb-designs" onclick="sw('designs')" style="flex:none;padding:14px 20px">🎨 Designs ({{ user_tmpls|length }})</button>
+    <button class="panel-tab" id="tb-posts" onclick="sw('posts')" style="flex:none;padding:14px 20px">📌 Posts ({{ user_posts|length }})</button>
+    {% if user and user.id == prof.id %}
+    <button class="panel-tab" id="tb-saved" onclick="sw('saved')" style="flex:none;padding:14px 20px">🔖 Saved ({{ saved_tmpls|length }})</button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container" style="padding-top:28px;padding-bottom:48px">
+
+  <!-- DESIGNS PANE -->
+  <div id="pane-designs">
+    {% if user_tmpls %}
+    <div class="cards-grid cards-grid-lg">
+      {% for t in user_tmpls %}
+      {% set lc = likes.get(t.id,[])|length %}{% set vc = views.get(t.id,0) %}
+      <div class="tmpl-card" onclick="location.href='/template/{{ t.id }}'">
+        {% if t.get('is_premium') %}<div class="premium-badge">💎 Premium</div>{% endif %}
+        <div class="tmpl-thumb">
+          {% if t.get('thumbnail') %}<img src="{{ t.thumbnail }}" loading="lazy"/>
+          {% else %}<div class="tmpl-thumb-placeholder" style="background:{{ t.bg }}">🎨</div>{% endif %}
+          <div class="tmpl-overlay">
+            <a href="/template/{{ t.id }}" class="btn btn-gold btn-sm" onclick="event.stopPropagation()">View</a>
+            {% if user and user.id == prof.id %}
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openSharePost('{{ t.id }}','{{ t.get('title',t.get('name','')) }}')" title="Share as Post">📌 Post</button>
+            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();delT('{{ t.id }}')">Delete</button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="tmpl-meta">
+          <div class="tmpl-name">{{ t.get('title',t.get('name','')) }}</div>
+          <div class="tmpl-stats flex gap-2"><span>❤ {{ lc }}</span><span>👁 {{ vc }}</span><span>⬇ {{ t.get('downloads',0) }}</span></div>
+          <span class="cat-tag">{{ t.get('category','') }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><span class="empty-icon">🎨</span><h3>No designs yet</h3>
+      {% if user and user.id == prof.id %}<a href="/upload" class="btn btn-gold mt-3">Upload First</a>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- POSTS PANE -->
+  <div id="pane-posts" class="hidden">
+    {% if user_posts %}
+    <div class="posts-feed">
+      {% for post in user_posts %}
+      {% set lc = post_likes.get(post.id,[])|length %}
+      {% set cc = post_comments.get(post.id,[])|length %}
+      {% set is_liked = user and user.id in post_likes.get(post.id,[]) %}
+      {% set is_saved = user and post.id in my_saved_posts %}
+      <div class="post-card" id="post-{{ post.id }}">
+        <!-- Post Header -->
+        <div class="post-header">
+          <div class="post-avatar">
+            {% if prof.avatar %}<img src="{{ prof.avatar }}" alt="{{ prof.username }}"/>
+            {% else %}<span>{{ prof.username[0].upper() }}</span>{% endif %}
+          </div>
+          <div class="post-meta">
+            <a href="/profile/{{ prof.username }}" class="post-username">{{ prof.display_name or prof.username }}</a>
+            <span class="post-time">{{ post.created_at }}</span>
+          </div>
+          {% if user and user.id == prof.id %}
+          <button class="post-delete-btn" onclick="deletePost('{{ post.id }}')" title="Delete post">✕</button>
+          {% endif %}
+        </div>
+
+        <!-- Post Caption -->
+        {% if post.caption %}
+        <div class="post-caption">{{ post.caption }}</div>
+        {% endif %}
+
+        <!-- Post Card Preview -->
+        <div class="post-preview-wrap" onclick="location.href='/template/{{ post.template_id }}'">
+          {% if post.thumbnail %}
+          <img src="{{ post.thumbnail }}" class="post-preview-img" loading="lazy"/>
+          {% else %}
+          <div class="post-preview-placeholder" style="background:{{ post.template_bg }}">
+            <span style="font-size:2rem">🎨</span>
+            <span style="color:rgba(255,255,255,.8);font-size:.9rem;margin-top:8px">{{ post.template_title }}</span>
+          </div>
+          {% endif %}
+          <div class="post-preview-overlay">
+            <span class="post-preview-tag">{{ post.template_title }}</span>
+            <span class="post-view-cta">View Template →</span>
+          </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="post-actions">
+          <button class="post-action-btn {% if is_liked %}liked{% endif %}" onclick="likePost('{{ post.id }}',this)">
+            <span class="post-action-icon">{% if is_liked %}❤{% else %}🤍{% endif %}</span>
+            <span class="post-action-count" id="lc-{{ post.id }}">{{ lc }}</span>
+          </button>
+          <button class="post-action-btn" onclick="toggleComments('{{ post.id }}')">
+            <span class="post-action-icon">💬</span>
+            <span class="post-action-count" id="cc-{{ post.id }}">{{ cc }}</span>
+          </button>
+          <button class="post-action-btn" onclick="sharePost('{{ post.id }}','{{ post.template_id }}')" title="Share">
+            <span class="post-action-icon">↗</span>
+            <span>Share</span>
+          </button>
+          <button class="post-action-btn {% if is_saved %}saved{% endif %}" onclick="savePost('{{ post.id }}',this)" title="Save">
+            <span class="post-action-icon">{% if is_saved %}🔖{% else %}🏷{% endif %}</span>
+            <span>{% if is_saved %}Saved{% else %}Save{% endif %}</span>
+          </button>
+          <a href="/template/{{ post.template_id }}" class="post-action-btn" onclick="trackDownload('{{ post.template_id }}')" title="Download">
+            <span class="post-action-icon">⬇</span>
+            <span>Use</span>
+          </a>
+        </div>
+
+        <!-- Comments section -->
+        <div class="post-comments-section hidden" id="comments-{{ post.id }}">
+          <div class="post-comments-list" id="clist-{{ post.id }}">
+            <!-- loaded dynamically -->
+          </div>
+          {% if user %}
+          <div class="post-comment-input">
+            <div class="comment-avatar">
+              {% if user.avatar %}<img src="{{ user.avatar }}" alt="{{ user.username }}"/>
+              {% else %}<span>{{ user.username[0].upper() }}</span>{% endif %}
+            </div>
+            <input class="comment-text-input" id="cinput-{{ post.id }}" placeholder="Add a comment…"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment('{{ post.id }}');}"/>
+            <button class="comment-send-btn" onclick="submitComment('{{ post.id }}')">Send</button>
+          </div>
+          {% else %}
+          <div style="text-align:center;padding:10px;font-size:.8rem;color:var(--muted)">
+            <a href="/login" style="color:var(--gold)">Sign in</a> to comment
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      <span class="empty-icon">📌</span>
+      <h3>No posts yet</h3>
+      {% if user and user.id == prof.id %}
+      <p style="color:var(--muted);margin-top:8px;margin-bottom:16px">Share your templates as posts so people can like, comment and download them.</p>
+      <button class="btn btn-gold" onclick="sw('designs')">Go to Designs to Post</button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- SAVED PANE -->
+  {% if user and user.id == prof.id %}
+  <div id="pane-saved" class="hidden">
+    {% if saved_tmpls %}
+    <div class="cards-grid cards-grid-lg">
+      {% for t in saved_tmpls %}
+      {% set lc = likes.get(t.id,[])|length %}{% set vc = views.get(t.id,0) %}
+      {% set uname = users.get(t.get('uploader_id',''),{}).get('username','CardHub') %}
+      {% include 'partials/card.html' %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><span class="empty-icon">🔖</span><h3>No saved templates</h3><a href="/explore" class="btn btn-gold mt-3">Browse</a></div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+<!-- Share-as-Post Modal -->
+<div class="modal-backdrop hidden" id="share-post-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <span class="modal-title">📌 Share as Post</span>
+      <button class="btn btn-ghost btn-icon" onclick="closeSharePost()">✕</button>
+    </div>
+    <div style="padding:16px 0 0">
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:12px">
+        Sharing: <strong id="share-tmpl-name" style="color:var(--text)"></strong>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Caption <span style="color:var(--muted)">(optional)</span></label>
+        <textarea id="post-caption" class="form-input" rows="3" placeholder="Say something about this template…" style="resize:vertical;font-size:.875rem"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-gold btn-full" onclick="submitPost()">📌 Post Now</button>
+        <button class="btn btn-outline" onclick="closeSharePost()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ── Posts Feed ── */
+.posts-feed { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+
+.post-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+.post-card:hover { box-shadow: 0 4px 32px rgba(0,0,0,.35); }
+
+.post-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 10px;
+}
+.post-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--surface3); border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-d); font-size: .95rem; color: var(--gold);
+  overflow: hidden; flex-shrink: 0;
+}
+.post-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.post-meta { flex: 1; min-width: 0; }
+.post-username { font-weight: 600; font-size: .9rem; color: var(--text); }
+.post-username:hover { color: var(--gold); }
+.post-time { display: block; font-size: .72rem; color: var(--muted); margin-top: 1px; }
+.post-delete-btn {
+  width: 28px; height: 28px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center;
+  background: rgba(224,80,96,.1); color: var(--red);
+  font-size: .7rem; cursor: pointer; border: none;
+  transition: background .15s;
+}
+.post-delete-btn:hover { background: rgba(224,80,96,.22); }
+
+.post-caption {
+  padding: 0 16px 12px;
+  font-size: .88rem; line-height: 1.55; color: var(--text);
+}
+
+.post-preview-wrap {
+  position: relative; cursor: pointer; overflow: hidden;
+  background: var(--surface2);
+}
+.post-preview-img {
+  width: 100%; max-height: 340px; object-fit: cover;
+  display: block; transition: transform .3s;
+}
+.post-preview-wrap:hover .post-preview-img { transform: scale(1.02); }
+.post-preview-placeholder {
+  width: 100%; height: 200px; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+}
+.post-preview-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 20px 14px 10px;
+  background: linear-gradient(transparent, rgba(0,0,0,.65));
+  display: flex; justify-content: space-between; align-items: flex-end;
+}
+.post-preview-tag {
+  font-size: .75rem; color: rgba(255,255,255,.8);
+  background: rgba(0,0,0,.35); padding: 3px 8px; border-radius: 100px;
+}
+.post-view-cta {
+  font-size: .75rem; color: var(--gold); font-weight: 600;
+  opacity: 0; transition: opacity .2s;
+}
+.post-preview-wrap:hover .post-view-cta { opacity: 1; }
+
+/* Action bar */
+.post-actions {
+  display: flex; align-items: center;
+  padding: 8px 12px; gap: 4px;
+  border-top: 1px solid var(--border);
+}
+.post-action-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px; border-radius: 8px;
+  background: none; border: none; cursor: pointer;
+  font-size: .8rem; color: var(--muted); font-family: inherit;
+  transition: all .15s;
+}
+.post-action-btn:hover { background: var(--surface2); color: var(--text); }
+.post-action-btn.liked { color: #e05060; }
+.post-action-btn.saved { color: var(--gold); }
+.post-action-icon { font-size: 1rem; line-height: 1; }
+.post-action-count { font-weight: 600; }
+
+/* Comments */
+.post-comments-section {
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+}
+.post-comments-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+
+.comment-item {
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.comment-av {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface3); display: flex;
+  align-items: center; justify-content: center;
+  font-size: .7rem; color: var(--gold); flex-shrink: 0;
+  overflow: hidden;
+}
+.comment-av img { width: 100%; height: 100%; object-fit: cover; }
+.comment-bubble {
+  background: var(--surface2); border-radius: 10px;
+  padding: 7px 10px; flex: 1;
+}
+.comment-user { font-weight: 600; font-size: .78rem; color: var(--gold); margin-bottom: 2px; }
+.comment-text { font-size: .83rem; color: var(--text); line-height: 1.4; }
+.comment-del { font-size: .65rem; color: var(--red); cursor: pointer; margin-top: 3px; }
+
+.post-comment-input {
+  display: flex; gap: 8px; align-items: center; margin-top: 4px;
+}
+.comment-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--surface3); display: flex; align-items: center;
+  justify-content: center; font-size: .75rem; color: var(--gold);
+  overflow: hidden; flex-shrink: 0;
+}
+.comment-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.comment-text-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 100px; padding: 7px 14px; color: var(--text);
+  font-size: .83rem; outline: none; font-family: inherit;
+  transition: border-color .15s;
+}
+.comment-text-input:focus { border-color: rgba(212,168,67,.4); }
+.comment-send-btn {
+  background: var(--gold); color: #1a0f00; border: none;
+  padding: 7px 14px; border-radius: 100px; font-size: .78rem;
+  font-weight: 700; cursor: pointer; transition: background .15s;
+}
+.comment-send-btn:hover { background: var(--gold2); }
+</style>
+
+<script>
+// Tab switcher
+function sw(tab) {
+  document.querySelectorAll('[id^="tb-"]').forEach(b => b.classList.remove('active'));
+  const tb = document.getElementById('tb-'+tab);
+  if (tb) tb.classList.add('active');
+  ['designs','posts','saved'].forEach(p => {
+    const el = document.getElementById('pane-'+p);
+    if (el) el.classList.toggle('hidden', p !== tab);
+  });
+  // Lazy-load first visible post comments state
+  if (tab === 'posts') initPostsPane();
+}
+
+function initPostsPane() {
+  // Nothing needed on init — comments load on demand
+}
+
+// Delete a design template
+async function delT(tid) {
+  if (!confirm('Delete permanently?')) return;
+  const r = await fetch('/api/delete-template/'+tid, {method:'DELETE'});
+  const d = await r.json();
+  if (d.success) { showToast('Deleted','success'); setTimeout(()=>location.reload(),700); }
+  else showToast(d.error||'Error','error');
+}
+
+// Follow
+async function toggleFollow(uid, username) {
+  const r = await fetch('/api/follow/'+uid, {method:'POST'});
+  const d = await r.json();
+  const btn = document.getElementById('follow-main-btn');
+  if (d.action==='followed') { if(btn){btn.textContent='✓ Following';btn.className='btn btn-outline btn-sm';} showToast('Following @'+username+' ✓','success'); }
+  else if (d.action==='unfollowed') { if(btn){btn.textContent='+ Follow';btn.className='btn btn-gold btn-sm';} showToast('Unfollowed @'+username); }
+  else if (d.action==='requested') { if(btn){btn.textContent='⏳ Request Sent';btn.disabled=true;} showToast('Follow request sent ✓','success'); }
+}
+
+// ── POST ACTIONS ──
+async function likePost(pid, btn) {
+  const r = await fetch('/api/post/like/'+pid, {method:'POST'});
+  if (r.status === 302 || r.redirected) { showToast('Sign in to like','error'); return; }
+  const d = await r.json();
+  const icon = btn.querySelector('.post-action-icon');
+  const count = document.getElementById('lc-'+pid);
+  if (d.action === 'liked') {
+    btn.classList.add('liked');
+    if (icon) icon.textContent = '❤';
+  } else {
+    btn.classList.remove('liked');
+    if (icon) icon.textContent = '🤍';
+  }
+  if (count) count.textContent = d.count;
+}
+
+async function savePost(pid, btn) {
+  const r = await fetch('/api/post/save/'+pid, {method:'POST'});
+  if (r.status === 302 || r.redirected) { showToast('Sign in to save','error'); return; }
+  const d = await r.json();
+  const icon = btn.querySelector('.post-action-icon');
+  const label = btn.querySelector('span:last-child');
+  if (d.action === 'saved') {
+    btn.classList.add('saved');
+    if (icon) icon.textContent = '🔖';
+    if (label) label.textContent = 'Saved';
+    showToast('Post saved ✓','success');
+  } else {
+    btn.classList.remove('saved');
+    if (icon) icon.textContent = '🏷';
+    if (label) label.textContent = 'Save';
+    showToast('Removed from saved');
+  }
+}
+
+function sharePost(pid, tid) {
+  const url = window.location.origin + '/template/' + tid;
+  navigator.clipboard.writeText(url).then(()=>showToast('Link copied ✓','success'));
+}
+
+async function toggleComments(pid) {
+  const section = document.getElementById('comments-'+pid);
+  const isHidden = section.classList.contains('hidden');
+  section.classList.toggle('hidden', !isHidden);
+  if (isHidden) {
+    await loadComments(pid);
+  }
+}
+
+async function loadComments(pid) {
+  const list = document.getElementById('clist-'+pid);
+  if (!list) return;
+  const r = await fetch('/api/post/'+pid+'/comments');
+  const comments = await r.json();
+  list.innerHTML = '';
+  if (!comments.length) {
+    list.innerHTML = '<div style="text-align:center;font-size:.8rem;color:var(--muted);padding:8px 0">No comments yet. Be the first!</div>';
+    return;
+  }
+  comments.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'comment-item';
+    div.id = 'ci-'+c.id;
+    const av = c.avatar ? `<img src="${c.avatar}" alt="${c.username}"/>` : c.username[0].toUpperCase();
+    div.innerHTML = `
+      <div class="comment-av">${av}</div>
+      <div class="comment-bubble">
+        <div class="comment-user">@${c.username}</div>
+        <div class="comment-text">${escHtml(c.text)}</div>
+        <div class="comment-del" onclick="deleteComment('${pid}','${c.id}')">Delete</div>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+async function submitComment(pid) {
+  const inp = document.getElementById('cinput-'+pid);
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  const r = await fetch('/api/post/comment/'+pid, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text})
+  });
+  const d = await r.json();
+  if (d.success) {
+    const count = document.getElementById('cc-'+pid);
+    if (count) count.textContent = parseInt(count.textContent||'0')+1;
+    await loadComments(pid);
+    showToast('Comment posted ✓','success');
+  } else showToast(d.error||'Error','error');
+}
+
+async function deleteComment(pid, cid) {
+  if (!confirm('Delete comment?')) return;
+  const r = await fetch('/api/post/comment/'+pid+'/'+cid, {method:'DELETE'});
+  const d = await r.json();
+  if (d.success) {
+    document.getElementById('ci-'+cid)?.remove();
+    const count = document.getElementById('cc-'+pid);
+    if (count) count.textContent = Math.max(0, parseInt(count.textContent||'1')-1);
+    showToast('Comment deleted','success');
+  }
+}
+
+async function deletePost(pid) {
+  if (!confirm('Delete this post?')) return;
+  const r = await fetch('/api/post/delete/'+pid, {method:'DELETE'});
+  const d = await r.json();
+  if (d.success) {
+    document.getElementById('post-'+pid)?.remove();
+    showToast('Post deleted','success');
+  }
+}
+
+function trackDownload(tid) {
+  fetch('/api/download/'+tid, {method:'POST'}).catch(()=>{});
+}
+
+// ── SHARE AS POST MODAL ──
+let _shareTemplateId = null;
+function openSharePost(tid, name) {
+  _shareTemplateId = tid;
+  document.getElementById('share-tmpl-name').textContent = name;
+  document.getElementById('post-caption').value = '';
+  document.getElementById('share-post-modal').classList.remove('hidden');
+}
+function closeSharePost() {
+  document.getElementById('share-post-modal').classList.add('hidden');
+  _shareTemplateId = null;
+}
+async function submitPost() {
+  if (!_shareTemplateId) return;
+  const caption = document.getElementById('post-caption').value.trim();
+  const r = await fetch('/api/post/create', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({template_id: _shareTemplateId, caption})
+  });
+  const d = await r.json();
+  if (d.success) {
+    closeSharePost();
+    showToast('Posted! ✓','success');
+    setTimeout(()=>location.reload(),800);
+  } else showToast(d.error||'Error','error');
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close modal on backdrop click
+document.getElementById('share-post-modal').addEventListener('click', function(e){
+  if (e.target === this) closeSharePost();
+});
+</script>
+{% endblock %}
